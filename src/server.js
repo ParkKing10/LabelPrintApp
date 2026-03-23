@@ -20,8 +20,45 @@ function requireAuth(req, res, next) {
 // ─── Scraping Logic ───────────────────────────────────────────
 let browserInstance = null;
 
+async function findChromePath() {
+  const fs = require('fs');
+  const { execSync } = require('child_process');
+
+  // 1. Explicit env var
+  if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+    return process.env.PUPPETEER_EXECUTABLE_PATH;
+  }
+
+  // 2. Try to find chrome via puppeteer's own cache
+  try {
+    const result = execSync('find /opt/render -name "chrome" -type f 2>/dev/null || find /home -name "chrome" -type f 2>/dev/null || true', { encoding: 'utf8' });
+    const paths = result.trim().split('\n').filter(p => p && !p.includes('crashpad'));
+    if (paths.length > 0) {
+      console.log('[Chrome] Found at:', paths[0]);
+      return paths[0];
+    }
+  } catch (e) { /* ignore */ }
+
+  // 3. Common system paths
+  const systemPaths = [
+    '/usr/bin/chromium-browser',
+    '/usr/bin/chromium',
+    '/usr/bin/google-chrome',
+    '/usr/bin/google-chrome-stable'
+  ];
+  for (const p of systemPaths) {
+    if (fs.existsSync(p)) return p;
+  }
+
+  // 4. Let puppeteer figure it out
+  return undefined;
+}
+
 async function getBrowser() {
   if (!browserInstance || !browserInstance.isConnected()) {
+    const executablePath = await findChromePath();
+    console.log('[Browser] Using Chrome at:', executablePath || 'puppeteer default');
+
     const launchOptions = {
       headless: 'new',
       args: [
@@ -32,9 +69,8 @@ async function getBrowser() {
         '--single-process'
       ]
     };
-    // Use system Chromium in Docker/Render
-    if (process.env.PUPPETEER_EXECUTABLE_PATH) {
-      launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+    if (executablePath) {
+      launchOptions.executablePath = executablePath;
     }
     browserInstance = await puppeteer.launch(launchOptions);
   }
