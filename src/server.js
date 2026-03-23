@@ -309,6 +309,42 @@ async function scrapeBookings(companyId) {
   }
 }
 
+// ─── In-Memory Cache ─────────────────────────────────────────
+// Stores scraped data per company, keyed by companyId + date
+const cache = {};
+const CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+function getCacheKey(companyId) {
+  const today = new Date().toISOString().split('T')[0]; // e.g. "2026-03-23"
+  return `${companyId}_${today}`;
+}
+
+function getCachedData(companyId) {
+  const key = getCacheKey(companyId);
+  const entry = cache[key];
+  if (!entry) return null;
+  // Check if cache is still fresh (max 24h)
+  if (Date.now() - entry.timestamp > CACHE_MAX_AGE_MS) {
+    delete cache[key];
+    return null;
+  }
+  return entry.data;
+}
+
+function setCachedData(companyId, data) {
+  const key = getCacheKey(companyId);
+  cache[key] = { data, timestamp: Date.now() };
+  // Clean up old entries (other dates)
+  for (const k of Object.keys(cache)) {
+    if (!k.endsWith('_' + new Date().toISOString().split('T')[0])) {
+      delete cache[k];
+    }
+  }
+}
+
+// Track active scrapes to prevent duplicate requests
+const activeScrapes = {};
+
 // ─── API Routes ───────────────────────────────────────────────
 
 // Login endpoint
@@ -328,13 +364,49 @@ app.get('/api/companies', requireAuth, (req, res) => {
 });
 
 // Get bookings for a specific company
+// ?refresh=true  → force re-scrape (ignore cache)
+// Default        → return cached data if available
 app.get('/api/bookings', requireAuth, async (req, res) => {
   try {
     const companyId = req.query.company || 'parkking';
-    const data = await scrapeBookings(companyId);
+    const forceRefresh = req.query.refresh === 'true';
+
+    // Check cache first (unless force refresh)
+    if (!forceRefresh) {
+      const cached = getCachedData(companyId);
+      if (cached) {
+        console.log(`[Cache] HIT for ${companyId} (cached at ${new Date(cache[getCacheKey(companyId)].timestamp).toLocaleTimeString('de-DE')})`);
+        return res.json({ ...cached, fromCache: true });
+      }
+    }
+
+    // Prevent duplicate scrapes for the same company
+    if (activeScrapes[companyId]) {
+      console.log(`[Cache] Scrape already in progress for ${companyId}, waiting...`);
+      try {
+        const data = await activeScrapes[companyId];
+        return res.json({ ...data, fromCache: true });
+      } catch (error) {
+        // Fall through to start new scrape
+      }
+    }
+
+    console.log(`[Cache] ${forceRefresh ? 'REFRESH' : 'MISS'} for ${companyId} — starting scrape...`);
+
+    // Start scrape and track the promise
+    const scrapePromise = scrapeBookings(companyId);
+    activeScrapes[companyId] = scrapePromise;
+
+    const data = await scrapePromise;
     data.company = COMPANIES[companyId]?.name || companyId;
-    res.json(data);
+
+    // Store in cache
+    setCachedData(companyId, data);
+    delete activeScrapes[companyId];
+
+    res.json({ ...data, fromCache: false });
   } catch (error) {
+    delete activeScrapes[req.query.company || 'parkking'];
     console.error('Scrape error:', error);
     res.status(500).json({
       error: 'Fehler beim Laden der Buchungen',
@@ -354,9 +426,38 @@ app.get('*', (req, res) => {
 });
 
 // ─── Start ────────────────────────────────────────────────────
+const AUTO_SCRAPE_INTERVAL_MS = 2 * 60 * 60 * 1000; // 2 hours
+
+async function autoScrapeAll() {
+  const companyIds = Object.keys(COMPANIES);
+  for (const id of companyIds) {
+    try {
+      console.log(`[AutoScrape] Starting scrape for ${COMPANIES[id].name}...`);
+      const data = await scrapeBookings(id);
+      data.company = COMPANIES[id].name;
+      setCachedData(id, data);
+      const checkins = (data.bookings || []).filter(b => b.type === 'checkin');
+      console.log(`[AutoScrape] ${COMPANIES[id].name}: ${checkins.length} check-ins cached ✓`);
+    } catch (err) {
+      console.error(`[AutoScrape] Error scraping ${COMPANIES[id].name}:`, err.message);
+    }
+  }
+}
+
 app.listen(PORT, () => {
-  console.log(`🅿️  ParkingPro Label Server running on port ${PORT}`);
-  console.log(`   Dashboard URL: ${process.env.PARKINGPRO_URL || 'not set'}`);
+  console.log(`🅿️  Label Print Tool Server running on port ${PORT}`);
+
+  // Auto-scrape on startup (after 10 sec delay to let Chrome init)
+  setTimeout(() => {
+    console.log('[AutoScrape] Initial scrape starting...');
+    autoScrapeAll();
+  }, 10000);
+
+  // Auto-scrape every 2 hours
+  setInterval(() => {
+    console.log('[AutoScrape] Scheduled refresh...');
+    autoScrapeAll();
+  }, AUTO_SCRAPE_INTERVAL_MS);
 });
 
 // Graceful shutdown
