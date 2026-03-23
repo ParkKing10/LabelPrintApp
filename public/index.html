@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0a0a0a">
-<title>ParkDirect24 Label</title>
+<title>Label Print Tool</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23c0f73a'/><text x='16' y='23' font-size='20' font-weight='bold' text-anchor='middle' fill='%23000'>P</text></svg>">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap');
@@ -19,8 +19,8 @@
   .login-box{width:100%;max-width:360px}
   .login-logo{display:flex;align-items:center;gap:12px;margin-bottom:32px;justify-content:center}
   .login-logo-icon{width:48px;height:48px;background:var(--accent);border-radius:12px;display:grid;place-items:center;font-size:24px;font-weight:700;color:#000;font-family:'JetBrains Mono',monospace}
-  .login-logo h1{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700}
-  .login-logo h1 span{color:var(--accent)}
+  .login-logo h1{font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;line-height:1.3}
+  .login-logo h1 span{color:var(--accent);display:block;font-size:12px;font-weight:600}
 
   .form-label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--text2);margin-bottom:6px;font-family:'JetBrains Mono',monospace}
   .form-input{width:100%;padding:14px 16px;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);color:var(--text);font-family:'DM Sans',sans-serif;font-size:16px;transition:border-color .2s;outline:none}
@@ -34,19 +34,24 @@
   .btn-outline:active{background:var(--accent-dim)}
   .btn-white{background:#fff;color:#000}
   .btn-ghost{background:transparent;color:var(--text2);font-weight:500;font-family:'DM Sans',sans-serif;font-size:14px;border:none}
-  .btn-sm{padding:10px 16px;font-size:13px;width:auto}
   .error-msg{color:#f87171;font-size:13px;margin-top:8px;text-align:center}
 
   .app{display:none;min-height:100dvh;flex-direction:column}
   .app.active{display:flex}
   .header{padding:12px 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:100}
   .header-icon{width:32px;height:32px;background:var(--accent);border-radius:8px;display:grid;place-items:center;font-size:16px;color:#000;font-weight:700;font-family:'JetBrains Mono',monospace}
-  .header h1{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600}
-  .header h1 span{color:var(--accent)}
-  .header-right{margin-left:auto;display:flex;gap:8px;align-items:center}
+  .header h1{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;line-height:1.3}
+  .header h1 span{color:var(--accent);font-size:10px;display:block;font-weight:400}
+  .header-right{margin-left:auto;display:flex;gap:6px;align-items:center}
   .header-btn{background:var(--surface);border:1px solid var(--border);color:var(--text2);padding:8px 12px;border-radius:8px;font-size:12px;cursor:pointer;font-family:'JetBrains Mono',monospace;transition:border-color .2s}
   .header-btn:active{border-color:var(--accent);color:var(--accent)}
   .main{flex:1;padding:16px 20px;max-width:600px;margin:0 auto;width:100%;overflow-y:auto}
+
+  /* Company Selector */
+  .company-select{display:flex;gap:8px;margin-bottom:16px}
+  .company-btn{flex:1;padding:12px;border:1.5px solid var(--border);border-radius:var(--r);background:var(--surface);color:var(--text2);font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;cursor:pointer;text-align:center;transition:all .2s}
+  .company-btn.active{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+  .company-btn:active{transform:scale(.97)}
 
   .search-bar{position:relative;margin-bottom:16px}
   .search-bar input{width:100%;padding:12px 16px 12px 42px;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);color:var(--text);font-size:15px;outline:none;font-family:'DM Sans',sans-serif}
@@ -58,9 +63,10 @@
   .status-chip{padding:5px 10px;border-radius:8px;font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:600}
   .chip-green{background:var(--green-bg);color:var(--green)}
   .chip-blue{background:rgba(96,165,250,0.08);color:#60a5fa}
+  .chip-company{background:rgba(192,247,58,0.08);color:var(--accent)}
 
   .booking-list{display:flex;flex-direction:column;gap:8px;padding-bottom:80px}
-  .booking-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);padding:14px 16px;cursor:pointer;transition:border-color .2s,background .15s;position:relative}
+  .booking-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);padding:14px 16px;cursor:pointer;transition:border-color .2s,background .15s}
   .booking-card:active{border-color:var(--accent);background:var(--surface2)}
   .booking-plate{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:800;letter-spacing:1.5px;color:var(--accent)}
   .booking-name{font-size:14px;font-weight:600;color:var(--text);margin-top:4px}
@@ -102,7 +108,7 @@
 
 <div class="login-screen" id="loginScreen">
   <div class="login-box">
-    <div class="login-logo"><div class="login-logo-icon">P</div><h1>Park<span>Direct24</span> Label</h1></div>
+    <div class="login-logo"><div class="login-logo-icon">P</div><h1>Label Print Tool<span>by Park King</span></h1></div>
     <div class="form-group"><label class="form-label">Team-Passwort</label><input type="password" id="loginPass" class="form-input" placeholder="Passwort eingeben" autofocus></div>
     <button class="btn btn-accent" onclick="doLogin()">EINLOGGEN</button>
     <div id="loginError" class="error-msg" style="display:none"></div>
@@ -111,10 +117,16 @@
 
 <div class="app" id="app">
   <div class="header">
-    <div class="header-icon">P</div><h1>Park<span>Direct24</span></h1>
+    <div class="header-icon">P</div><h1>Label Print Tool<span>by Park King</span></h1>
     <div class="header-right"><button class="header-btn" onclick="loadBookings()">↻ Laden</button><button class="header-btn" onclick="doLogout()">Logout</button></div>
   </div>
   <div class="main">
+    <!-- Company Selector -->
+    <div class="company-select">
+      <button class="company-btn active" id="btn-parkking" onclick="selectCompany('parkking')">🅿️ Park King</button>
+      <button class="company-btn" id="btn-psfmsf" onclick="selectCompany('psfmsf')">✈️ PSF/MSF</button>
+    </div>
+
     <div class="search-bar"><span class="search-icon">🔍</span><input type="text" id="searchInput" placeholder="Kennzeichen oder Name suchen..." oninput="filterBookings()"></div>
     <div class="status-bar" id="statusBar"></div>
     <div id="loadingState" class="loading" style="display:none"><div class="spinner"></div><div class="loading-text">Check-In Buchungen werden geladen...</div></div>
@@ -142,19 +154,21 @@
 
 <script>
 let authToken = localStorage.getItem('pp_token') || '';
+let currentCompany = localStorage.getItem('pp_company') || 'parkking';
 let allBookings = [];
 let currentBooking = null;
+let companyName = '';
 
-if (authToken) { showApp(); loadBookings(); } else { document.getElementById('loginScreen').style.display = 'flex'; }
-document.getElementById('loginPass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+if (authToken) { showApp(); selectCompany(currentCompany); } else { document.getElementById('loginScreen').style.display='flex'; }
+document.getElementById('loginPass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
 
 async function doLogin() {
   const pass = document.getElementById('loginPass').value.trim();
   if (!pass) return;
   try {
-    const res = await fetch('/api/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password:pass}) });
+    const res = await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pass})});
     const data = await res.json();
-    if (data.success) { authToken=data.token; localStorage.setItem('pp_token',authToken); showApp(); loadBookings(); }
+    if (data.success) { authToken=data.token; localStorage.setItem('pp_token',authToken); showApp(); selectCompany(currentCompany); }
     else showLoginError('Falsches Passwort');
   } catch(e) { showLoginError('Verbindungsfehler'); }
 }
@@ -162,34 +176,47 @@ function doLogout() { authToken=''; localStorage.removeItem('pp_token'); documen
 function showApp() { document.getElementById('loginScreen').style.display='none'; document.getElementById('app').classList.add('active'); }
 function showLoginError(m) { const e=document.getElementById('loginError'); e.textContent=m; e.style.display='block'; setTimeout(()=>e.style.display='none',3000); }
 
+function selectCompany(id) {
+  currentCompany = id;
+  localStorage.setItem('pp_company', id);
+  document.querySelectorAll('.company-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-'+id).classList.add('active');
+  loadBookings();
+}
+
 async function loadBookings() {
   const list=document.getElementById('bookingList'), loading=document.getElementById('loadingState'), err=document.getElementById('errorState');
   list.innerHTML=''; loading.style.display='flex'; err.style.display='none'; document.getElementById('searchInput').value='';
+  document.getElementById('statusBar').innerHTML='';
   try {
-    const res = await fetch('/api/bookings', {headers:{'X-Auth-Token':authToken}});
+    const res = await fetch('/api/bookings?company='+currentCompany, {headers:{'X-Auth-Token':authToken}});
     if (res.status===401) { doLogout(); return; }
     const data = await res.json();
     if (data.error) throw new Error(data.detail||data.error);
     allBookings = (data.bookings||[]).filter(b => b.type==='checkin');
+    companyName = data.company || '';
     loading.style.display='none';
-    document.getElementById('statusBar').innerHTML = `<div class="status-chip chip-blue">${data.date||'Heute'}</div><div class="status-chip chip-green">▶ ${allBookings.length} Check-Ins</div>`;
+    document.getElementById('statusBar').innerHTML = `
+      <div class="status-chip chip-company">${companyName}</div>
+      <div class="status-chip chip-blue">${data.date||'Heute'}</div>
+      <div class="status-chip chip-green">▶ ${allBookings.length} Check-Ins</div>`;
     if (!allBookings.length) { err.textContent='Keine Check-In Buchungen für heute.'; err.style.display='block'; return; }
     renderBookings(allBookings);
     showToast(allBookings.length+' Check-Ins geladen ✓');
-  } catch(e) { loading.style.display='none'; err.innerHTML=`<div style="margin-bottom:8px">⚠️ ${e.message}</div><button class="btn btn-accent btn-sm" onclick="loadBookings()" style="display:inline-block;width:auto">Nochmal</button>`; err.style.display='block'; }
+  } catch(e) { loading.style.display='none'; err.innerHTML=`<div style="margin-bottom:8px">⚠️ ${e.message}</div><button class="btn btn-accent" onclick="loadBookings()" style="display:inline-block;width:auto;padding:10px 20px;font-size:13px">Nochmal</button>`; err.style.display='block'; }
 }
 
 function filterBookings() {
   const q = document.getElementById('searchInput').value.trim().toLowerCase();
-  const filtered = q ? allBookings.filter(b => (b.kennzeichen||'').toLowerCase().includes(q) || (b.name||'').toLowerCase().includes(q)) : allBookings;
+  const filtered = q ? allBookings.filter(b => (b.kennzeichen||'').toLowerCase().includes(q)||(b.name||'').toLowerCase().includes(q)) : allBookings;
   renderBookings(filtered);
   const c=document.querySelector('.chip-green'); if(c) c.textContent='▶ '+filtered.length+' Check-Ins';
 }
 
 function renderBookings(list) {
   const el=document.getElementById('bookingList');
-  if (!list.length) { el.innerHTML='<div class="empty">Keine Treffer.</div>'; return; }
-  el.innerHTML = list.map((b,i) => `<div class="booking-card" onclick="openEdit(${allBookings.indexOf(b)})" style="animation-delay:${Math.min(i,15)*0.03+0.05}s">
+  if(!list.length){el.innerHTML='<div class="empty">Keine Treffer.</div>';return;}
+  el.innerHTML=list.map((b,i)=>`<div class="booking-card" onclick="openEdit(${allBookings.indexOf(b)})" style="animation-delay:${Math.min(i,15)*0.03+0.05}s">
     <div class="booking-plate">${b.kennzeichen||'—'}</div>
     <div class="booking-name">${b.name||'—'}</div>
     <div class="booking-details">
@@ -201,70 +228,61 @@ function renderBookings(list) {
 }
 
 function openEdit(idx) {
-  currentBooking = { ...allBookings[idx], _idx:idx };
-  document.getElementById('editPlate').value = currentBooking.kennzeichen||'';
-  document.getElementById('editName').value = currentBooking.name||'';
-  document.getElementById('editReturn').textContent = currentBooking.rueckgabe||'—';
-  document.getElementById('editSpot').value = '';
+  currentBooking={...allBookings[idx],_idx:idx};
+  document.getElementById('editPlate').value=currentBooking.kennzeichen||'';
+  document.getElementById('editName').value=currentBooking.name||'';
+  document.getElementById('editReturn').textContent=currentBooking.rueckgabe||'—';
+  document.getElementById('editSpot').value='';
   document.getElementById('editModal').classList.add('active');
   renderLabel();
 }
 
 function closeModal() {
-  if (currentBooking) {
-    allBookings[currentBooking._idx].kennzeichen = document.getElementById('editPlate').value.trim().toUpperCase();
-    allBookings[currentBooking._idx].name = document.getElementById('editName').value.trim();
-    filterBookings();
-  }
+  if(currentBooking){allBookings[currentBooking._idx].kennzeichen=document.getElementById('editPlate').value.trim().toUpperCase();allBookings[currentBooking._idx].name=document.getElementById('editName').value.trim();filterBookings();}
   document.getElementById('editModal').classList.remove('active');
 }
 
 function renderLabel() {
-  const plate = (document.getElementById('editPlate').value||'').trim().toUpperCase();
-  const name = (document.getElementById('editName').value||'').trim();
-  const ret = document.getElementById('editReturn').textContent||'';
-  const spot = (document.getElementById('editSpot').value||'').trim();
+  const plate=(document.getElementById('editPlate').value||'').trim().toUpperCase();
+  const name=(document.getElementById('editName').value||'').trim();
+  const ret=document.getElementById('editReturn').textContent||'';
+  const spot=(document.getElementById('editSpot').value||'').trim();
 
-  const W=709, H=472, canvas=document.getElementById('labelCanvas');
-  canvas.width=W; canvas.height=H; canvas.style.width='100%'; canvas.style.maxWidth='340px'; canvas.style.height='auto';
+  const W=709,H=472,canvas=document.getElementById('labelCanvas');
+  canvas.width=W;canvas.height=H;canvas.style.width='100%';canvas.style.maxWidth='340px';canvas.style.height='auto';
   const ctx=canvas.getContext('2d');
-  ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);
 
   // Top bar
-  ctx.fillStyle='#111'; ctx.fillRect(0,0,W,52);
-  ctx.fillStyle='#4ade80'; ctx.font='bold 22px "Helvetica Neue",Arial,sans-serif'; ctx.textBaseline='middle';
+  ctx.fillStyle='#111';ctx.fillRect(0,0,W,52);
+  ctx.fillStyle='#4ade80';ctx.font='bold 22px "Helvetica Neue",Arial,sans-serif';ctx.textBaseline='middle';
   ctx.fillText('▶ CHECK-IN',20,26);
-  if (ret&&ret!=='—') { ctx.fillStyle='#bbb'; ctx.font='17px "Helvetica Neue",Arial,sans-serif'; ctx.textAlign='right'; ctx.fillText('Rückgabe: '+ret,W-20,26); ctx.textAlign='left'; }
+  if(ret&&ret!=='—'){ctx.fillStyle='#bbb';ctx.font='17px "Helvetica Neue",Arial,sans-serif';ctx.textAlign='right';ctx.fillText('Rückgabe: '+ret,W-20,26);ctx.textAlign='left';}
 
-  // PLATE - dominant
-  ctx.fillStyle='#000'; let fs=82;
-  ctx.font=`bold ${fs}px "Helvetica Neue",Arial,sans-serif`; ctx.textBaseline='top';
+  // PLATE
+  ctx.fillStyle='#000';let fs=82;
+  ctx.font=`bold ${fs}px "Helvetica Neue",Arial,sans-serif`;ctx.textBaseline='top';
   while(ctx.measureText(plate||'—').width>W-40&&fs>40){fs-=4;ctx.font=`bold ${fs}px "Helvetica Neue",Arial,sans-serif`;}
   ctx.fillText(plate||'—',20,72);
-  ctx.fillStyle='#e0e0e0'; ctx.fillRect(20,72+fs+6,W-40,2);
+  ctx.fillStyle='#e0e0e0';ctx.fillRect(20,72+fs+6,W-40,2);
 
   // Name
-  ctx.fillStyle='#333'; ctx.font='500 30px "Helvetica Neue",Arial,sans-serif';
+  ctx.fillStyle='#333';ctx.font='500 30px "Helvetica Neue",Arial,sans-serif';
   ctx.fillText(name,20,72+fs+22);
 
   // Spot
   if(spot){ctx.fillStyle='#999';ctx.font='15px "Helvetica Neue",Arial,sans-serif';ctx.textAlign='right';ctx.fillText('STELLPLATZ',W-20,72+fs+20);ctx.fillStyle='#000';ctx.font='bold 32px "Helvetica Neue",Arial,sans-serif';ctx.fillText(spot,W-20,72+fs+40);ctx.textAlign='left';}
 
   // Bottom
-  ctx.fillStyle='#f5f5f5'; ctx.fillRect(0,H-42,W,42);
-  ctx.fillStyle='#bbb'; ctx.font='14px "Helvetica Neue",Arial,sans-serif'; ctx.fillText('ParkDirect24',20,H-18);
-  ctx.textAlign='right'; ctx.fillStyle='#ccc'; ctx.font='12px "Helvetica Neue",Arial,sans-serif';
+  ctx.fillStyle='#f5f5f5';ctx.fillRect(0,H-42,W,42);
+  ctx.fillStyle='#bbb';ctx.font='14px "Helvetica Neue",Arial,sans-serif';ctx.fillText(companyName||'Label Print Tool',20,H-18);
+  ctx.textAlign='right';ctx.fillStyle='#ccc';ctx.font='12px "Helvetica Neue",Arial,sans-serif';
   ctx.fillText(new Date().toLocaleString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}),W-20,H-18);
   ctx.textAlign='left';
 }
 
-function downloadLabel() {
-  const c=document.getElementById('labelCanvas'), p=(document.getElementById('editPlate').value||'label').trim().toUpperCase().replace(/[\s\.]/g,'-');
-  const a=document.createElement('a'); a.download=`label-${p}-${Date.now()}.png`; a.href=c.toDataURL('image/png'); a.click(); showToast('Gespeichert ✓');
-}
-async function shareLabel() {
-  try { const b=await new Promise(r=>document.getElementById('labelCanvas').toBlob(r,'image/png')); const f=new File([b],'label.png',{type:'image/png'}); if(navigator.canShare?.({files:[f]})){await navigator.share({files:[f],title:'Label'});}else{downloadLabel();} } catch(e){downloadLabel();}
-}
+function downloadLabel(){const c=document.getElementById('labelCanvas'),p=(document.getElementById('editPlate').value||'label').trim().toUpperCase().replace(/[\s\.]/g,'-');const a=document.createElement('a');a.download=`label-${p}-${Date.now()}.png`;a.href=c.toDataURL('image/png');a.click();showToast('Gespeichert ✓');}
+async function shareLabel(){try{const b=await new Promise(r=>document.getElementById('labelCanvas').toBlob(r,'image/png'));const f=new File([b],'label.png',{type:'image/png'});if(navigator.canShare?.({files:[f]})){await navigator.share({files:[f],title:'Label'});}else{downloadLabel();}}catch(e){downloadLabel();}}
 function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
 </script>
 </body>
