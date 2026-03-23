@@ -118,7 +118,7 @@
 <div class="app" id="app">
   <div class="header">
     <div class="header-icon">P</div><h1>Label Print Tool<span>by Park King</span></h1>
-    <div class="header-right"><button class="header-btn" onclick="loadBookings()">↻ Laden</button><button class="header-btn" onclick="doLogout()">Logout</button></div>
+    <div class="header-right"><button class="header-btn" onclick="loadBookings(true)">↻ Neu laden</button><button class="header-btn" onclick="doLogout()">Logout</button></div>
   </div>
   <div class="main">
     <!-- Company Selector -->
@@ -182,29 +182,32 @@ function selectCompany(id) {
   localStorage.setItem('pp_company', id);
   document.querySelectorAll('.company-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('btn-'+id).classList.add('active');
-  loadBookings();
+  loadBookings(false);
 }
 
-async function loadBookings() {
+async function loadBookings(forceRefresh) {
   const list=document.getElementById('bookingList'), loading=document.getElementById('loadingState'), err=document.getElementById('errorState');
   list.innerHTML=''; loading.style.display='flex'; err.style.display='none'; document.getElementById('searchInput').value='';
   document.getElementById('statusBar').innerHTML='';
+  const refreshParam = forceRefresh ? '&refresh=true' : '';
   try {
-    const res = await fetch('/api/bookings?company='+currentCompany, {headers:{'X-Auth-Token':authToken}});
+    const res = await fetch('/api/bookings?company='+currentCompany+refreshParam, {headers:{'X-Auth-Token':authToken}});
     if (res.status===401) { doLogout(); return; }
     const data = await res.json();
     if (data.error) throw new Error(data.detail||data.error);
     allBookings = (data.bookings||[]).filter(b => b.type==='checkin');
     companyName = data.company || '';
     loading.style.display='none';
+    const cacheInfo = data.fromCache ? '⚡ Cache' : '🔄 Frisch';
     document.getElementById('statusBar').innerHTML = `
       <div class="status-chip chip-company">${companyName}</div>
       <div class="status-chip chip-blue">${data.date||'Heute'}</div>
-      <div class="status-chip chip-green">▶ ${allBookings.length} Check-Ins</div>`;
+      <div class="status-chip chip-green">▶ ${allBookings.length} Check-Ins</div>
+      <div class="status-chip" style="background:rgba(255,255,255,0.05);color:var(--text3)">${cacheInfo}</div>`;
     if (!allBookings.length) { err.textContent='Keine Check-In Buchungen für heute.'; err.style.display='block'; return; }
     renderBookings(allBookings);
-    showToast(allBookings.length+' Check-Ins geladen ✓');
-  } catch(e) { loading.style.display='none'; err.innerHTML=`<div style="margin-bottom:8px">⚠️ ${e.message}</div><button class="btn btn-accent" onclick="loadBookings()" style="display:inline-block;width:auto;padding:10px 20px;font-size:13px">Nochmal</button>`; err.style.display='block'; }
+    showToast(allBookings.length+' Check-Ins '+(data.fromCache?'(Cache)':'geladen')+' ✓');
+  } catch(e) { loading.style.display='none'; err.innerHTML=`<div style="margin-bottom:8px">⚠️ ${e.message}</div><button class="btn btn-accent" onclick="loadBookings(true)" style="display:inline-block;width:auto;padding:10px 20px;font-size:13px">Nochmal</button>`; err.style.display='block'; }
 }
 
 function filterBookings() {
