@@ -92,12 +92,18 @@ async function scrapeBookings(dateStr) {
     });
     await new Promise(r => setTimeout(r, 2000));
 
-    // Step 2: Check if login is needed by looking for password input
-    const needsLogin = await page.evaluate(() => !!document.querySelector('input[type="password"]'));
-    console.log('[Scraper] Step 2: Login needed?', needsLogin);
+    // Step 2: Check if we got redirected to login page
+    const currentUrl = page.url();
+    const needsLogin = currentUrl.includes('/authentication/login') ||
+                       await page.evaluate(() => !!document.querySelector('input[type="password"]'));
+    console.log('[Scraper] Step 2: Login needed?', needsLogin, 'URL:', currentUrl);
 
     if (needsLogin) {
       console.log('[Scraper] Logging in...');
+
+      // Wait for the login form to fully render
+      await page.waitForSelector('input[type="password"]', { timeout: 10000 });
+      await new Promise(r => setTimeout(r, 1000));
 
       // Find and fill email/username field (try all common selectors)
       const emailFilled = await page.evaluate((email) => {
@@ -152,12 +158,13 @@ async function scrapeBookings(dateStr) {
       console.log('[Scraper] After login, URL:', page.url());
     }
 
-    // Step 3: Navigate to day-all view using hash
+    // Step 3: Navigate to day-all view
     console.log('[Scraper] Step 3: Navigating to day-all view...');
-    // For SPA hash routing, we set the hash via JavaScript
-    await page.evaluate(() => {
-      window.location.hash = '#view=day-all';
+    await page.goto('https://parkdirect24.parkingpro.de/#view=day-all', {
+      waitUntil: 'networkidle2',
+      timeout: 30000
     });
+    // Extra wait for SPA to render the hash route
     await new Promise(r => setTimeout(r, 5000));
 
     // Step 4: Wait for the Kendo grid with actual data
