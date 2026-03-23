@@ -82,120 +82,109 @@ async function scrapeBookings(dateStr) {
   const page = await browser.newPage();
 
   try {
-    // Set viewport
     await page.setViewport({ width: 1400, height: 900 });
 
-    // Navigate to ParkingPro
-    console.log('[Scraper] Navigating to ParkingPro...');
+    // Step 1: Navigate to main URL
+    console.log('[Scraper] Step 1: Navigating to ParkingPro...');
     await page.goto(process.env.PARKINGPRO_URL || 'https://parkdirect24.parkingpro.de/', {
       waitUntil: 'networkidle2',
-      timeout: 30000
+      timeout: 45000
     });
+    await new Promise(r => setTimeout(r, 2000));
 
-    // Check if login is needed
-    const needsLogin = await page.evaluate(() => {
-      const loginForm = document.querySelector('input[type="email"], input[type="password"], input[name="email"], input[name="username"], #email, #login, .login-form, [name="login"]');
-      return !!loginForm;
-    });
+    // Step 2: Check if login is needed by looking for password input
+    const needsLogin = await page.evaluate(() => !!document.querySelector('input[type="password"]'));
+    console.log('[Scraper] Step 2: Login needed?', needsLogin);
 
     if (needsLogin) {
       console.log('[Scraper] Logging in...');
 
-      // Try common email field selectors
-      const emailSelectors = [
-        'input[type="email"]',
-        'input[name="email"]',
-        'input[name="username"]',
-        '#email',
-        '#username',
-        'input[placeholder*="mail"]',
-        'input[placeholder*="user"]',
-        'input[placeholder*="Benutzer"]',
-        'input[placeholder*="E-Mail"]'
-      ];
-
-      let emailField = null;
-      for (const sel of emailSelectors) {
-        emailField = await page.$(sel);
-        if (emailField) break;
-      }
-
-      if (!emailField) {
-        // Try first text/email input
-        emailField = await page.$('input[type="text"], input[type="email"]');
-      }
-
-      if (emailField) {
-        await emailField.click({ clickCount: 3 });
-        await emailField.type(process.env.PARKINGPRO_EMAIL, { delay: 30 });
-      }
-
-      // Password field
-      const passField = await page.$('input[type="password"]');
-      if (passField) {
-        await passField.click({ clickCount: 3 });
-        await passField.type(process.env.PARKINGPRO_PASSWORD, { delay: 30 });
-      }
-
-      // Submit
-      const submitSelectors = [
-        'button[type="submit"]',
-        'input[type="submit"]',
-        'button.login',
-        '.btn-login',
-        'button:has-text("Login")',
-        'button:has-text("Anmelden")'
-      ];
-
-      let submitted = false;
-      for (const sel of submitSelectors) {
-        try {
-          const btn = await page.$(sel);
-          if (btn) {
-            await btn.click();
-            submitted = true;
-            break;
+      // Find and fill email/username field (try all common selectors)
+      const emailFilled = await page.evaluate((email) => {
+        const selectors = ['input[type="email"]','input[name="email"]','input[name="username"]','#email','#username','input[type="text"]'];
+        for (const sel of selectors) {
+          const el = document.querySelector(sel);
+          if (el && el.type !== 'password') {
+            el.value = email;
+            el.dispatchEvent(new Event('input', {bubbles:true}));
+            el.dispatchEvent(new Event('change', {bubbles:true}));
+            return true;
           }
-        } catch (e) { /* try next */ }
-      }
+        }
+        return false;
+      }, process.env.PARKINGPRO_EMAIL);
+      console.log('[Scraper] Email filled:', emailFilled);
 
-      if (!submitted) {
-        await page.keyboard.press('Enter');
-      }
+      // Fill password
+      const passFilled = await page.evaluate((pass) => {
+        const el = document.querySelector('input[type="password"]');
+        if (el) {
+          el.value = pass;
+          el.dispatchEvent(new Event('input', {bubbles:true}));
+          el.dispatchEvent(new Event('change', {bubbles:true}));
+          return true;
+        }
+        return false;
+      }, process.env.PARKINGPRO_PASSWORD);
+      console.log('[Scraper] Password filled:', passFilled);
 
-      // Wait for navigation after login
-      await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 }).catch(() => {});
-      await new Promise(r => setTimeout(r, 3000));
+      // Click submit button
+      await new Promise(r => setTimeout(r, 500));
+      const submitClicked = await page.evaluate(() => {
+        const btns = ['button[type="submit"]','input[type="submit"]','.btn-primary','button.login','.btn-login'];
+        for (const sel of btns) {
+          const el = document.querySelector(sel);
+          if (el) { el.click(); return sel; }
+        }
+        // Fallback: click any button in a form
+        const form = document.querySelector('form');
+        if (form) {
+          const btn = form.querySelector('button, input[type="submit"]');
+          if (btn) { btn.click(); return 'form-button'; }
+        }
+        return false;
+      });
+      console.log('[Scraper] Submit clicked:', submitClicked);
+
+      // Wait for login to complete
+      await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 20000 }).catch(() => {});
+      await new Promise(r => setTimeout(r, 5000));
+      console.log('[Scraper] After login, URL:', page.url());
     }
 
-    // Navigate to day view
-    const targetUrl = `https://parkdirect24.parkingpro.de/#view=day-all`;
-    console.log('[Scraper] Navigating to day view...');
+    // Step 3: Navigate to day-all view using hash
+    console.log('[Scraper] Step 3: Navigating to day-all view...');
+    // For SPA hash routing, we set the hash via JavaScript
+    await page.evaluate(() => {
+      window.location.hash = '#view=day-all';
+    });
+    await new Promise(r => setTimeout(r, 5000));
 
-    if (page.url().includes('#view=day-all')) {
-      // Already there, just reload
-      await page.reload({ waitUntil: 'networkidle2' });
-    } else {
-      await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+    // Step 4: Wait for the Kendo grid with actual data
+    console.log('[Scraper] Step 4: Waiting for grid data...');
+
+    // Wait for tr[data-uid] elements (the actual data rows)
+    let retries = 0;
+    let rowCount = 0;
+    while (retries < 10) {
+      rowCount = await page.evaluate(() => document.querySelectorAll('tr[data-uid]').length);
+      console.log(`[Scraper] Retry ${retries}: Found ${rowCount} data rows`);
+      if (rowCount > 0) break;
+      await new Promise(r => setTimeout(r, 2000));
+      retries++;
     }
 
-    // Wait for table to appear
-    await new Promise(r => setTimeout(r, 3000));
-
-    // If a specific date is requested and it's not today, try to navigate to it
-    if (dateStr) {
-      const today = new Date().toISOString().split('T')[0];
-      // The dashboard shows today by default; date navigation may need UI interaction
-      // For now we scrape whatever date is shown
+    if (rowCount === 0) {
+      // Debug: log what the page looks like
+      const pageTitle = await page.title();
+      const bodyText = await page.evaluate(() => document.body.innerText.substring(0, 500));
+      console.log('[Scraper] DEBUG - Page title:', pageTitle);
+      console.log('[Scraper] DEBUG - Body text:', bodyText);
+      console.log('[Scraper] DEBUG - URL:', page.url());
     }
 
-    // Wait for the Kendo grid to fully render
-    console.log('[Scraper] Waiting for Kendo grid...');
-    await page.waitForSelector('tr[data-uid]', { timeout: 15000 }).catch(() => {});
-    await new Promise(r => setTimeout(r, 2000));
-
-    // Extract bookings using Kendo UI data-field attributes (exact selectors from HTML source)
-    console.log('[Scraper] Extracting bookings via data-field attributes...');
+    // Step 5: Extract bookings
+    console.log('[Scraper] Step 5: Extracting bookings...');
     const bookings = await page.evaluate(() => {
       const rows = document.querySelectorAll('tr[data-uid]');
       const results = [];
