@@ -189,116 +189,58 @@ async function scrapeBookings(dateStr) {
       // For now we scrape whatever date is shown
     }
 
-    // Extract bookings from the table
-    console.log('[Scraper] Extracting bookings...');
+    // Wait for the Kendo grid to fully render
+    console.log('[Scraper] Waiting for Kendo grid...');
+    await page.waitForSelector('tr[data-uid]', { timeout: 15000 }).catch(() => {});
+    await new Promise(r => setTimeout(r, 2000));
+
+    // Extract bookings using Kendo UI data-field attributes (exact selectors from HTML source)
+    console.log('[Scraper] Extracting bookings via data-field attributes...');
     const bookings = await page.evaluate(() => {
-      const rows = document.querySelectorAll('tr');
+      const rows = document.querySelectorAll('tr[data-uid]');
       const results = [];
 
       for (const row of rows) {
-        const cells = row.querySelectorAll('td');
-        if (cells.length < 10) continue;
+        // Helper: get text content of a cell by its data-field attribute
+        const getField = (field) => {
+          const cell = row.querySelector(`td[data-field="${field}"]`);
+          return cell ? (cell.textContent || '').trim() : '';
+        };
 
-        // Skip rows that are group headers (Zeit: XX:XX)
-        const rowText = row.textContent || '';
-        if (rowText.includes('Zeit:') && rowText.includes('Anzahl:')) continue;
+        // Extract all relevant fields using exact data-field selectors
+        const name = getField('fullName()').replace(/^ParkKing:\s*/i, '').trim();
+        const kennzeichen = getField('car.licensePlate');
+        const zeit = getField('dayView.time');
+        const parkdatum = getField('dayView.arrivalDate');
+        const rueckgabe = getField('dayView.departureDate');
+        const personen = getField('numberOfPersons');
+        const tage = getField('parkedDaysCount()');
+        const flug = getField('dayView.flightNumber');
+        const telefon = getField('contactInformation.phone');
+        const fahrzeug = getField('car.description');
+        const code = getField('reservationCode');
 
-        // Extract data based on column positions from screenshot
-        // Columns: [checkbox] [nr] [icons] [ausstehend] [zahlungsfrist] [zeit] [flug] [parkdatum] [rückgabe] [#pers] [#tage] [name] [telefon] [kennzeichen]
-        const cellTexts = Array.from(cells).map(c => (c.textContent || '').trim());
+        // Determine type from row CSS class
+        const classList = row.className || '';
+        let type = 'unknown';
+        if (classList.includes('bg-success')) type = 'checkin';
+        if (classList.includes('bg-danger')) type = 'checkout';
 
-        // Find the row number (first cell with a plain number)
-        let nr = '';
-        let zeit = '';
-        let flug = '';
-        let parkdatum = '';
-        let rueckgabe = '';
-        let personen = '';
-        let tage = '';
-        let name = '';
-        let telefon = '';
-        let kennzeichen = '';
-
-        // The table structure based on screenshot:
-        // We need to find cells by their content patterns
-        for (let i = 0; i < cellTexts.length; i++) {
-          const txt = cellTexts[i];
-
-          // Row number (1-3 digit number, early in the row)
-          if (i <= 2 && /^\d{1,3}$/.test(txt) && !nr) {
-            nr = txt;
-            continue;
-          }
-
-          // Time pattern (HH:MM)
-          if (/^\d{2}:\d{2}$/.test(txt) && !zeit) {
-            zeit = txt;
-            continue;
-          }
-
-          // Date pattern (DD.MM.YYYY)
-          if (/^\d{2}\.\d{2}\.\d{4}$/.test(txt)) {
-            if (!parkdatum) { parkdatum = txt; continue; }
-            if (!rueckgabe) { rueckgabe = txt; continue; }
-          }
-
-          // Personen (1-2 digit number after dates)
-          if (/^\d{1,2}$/.test(txt) && parkdatum && !tage) {
-            if (!personen) { personen = txt; continue; }
-            tage = txt;
-            continue;
-          }
-
-          // Phone number
-          if (/^\+?\d{6,}/.test(txt.replace(/\s/g, ''))) {
-            telefon = txt;
-            continue;
-          }
-
-          // Kennzeichen pattern (XX-XX NNNN or similar, usually last meaningful column)
-          if (/^[A-ZÄÖÜ]{1,4}[\s\-][A-ZÄÖÜ]{1,3}/.test(txt) && !kennzeichen) {
-            kennzeichen = txt;
-            continue;
-          }
-        }
-
-        // Name: usually contains "ParkKing:" or is a regular name
-        // Find it by looking for the cell that contains a name-like pattern
-        for (let i = 0; i < cellTexts.length; i++) {
-          const txt = cellTexts[i];
-          if (txt.includes('ParkKing:') || txt.includes('Parking:')) {
-            name = txt.replace(/^ParkKing:\s*/, '').replace(/^Parking:\s*/, '').trim();
-            break;
-          }
-          // Regular name (First Last, after tage column)
-          if (parkdatum && tage && !name && /^[A-ZÄÖÜ][a-zäöüß]+\s/.test(txt) && !telefon.includes(txt)) {
-            name = txt;
-          }
-        }
-
-        // Also try: name might just be a cell with letters and spaces
-        if (!name) {
-          for (let i = Math.max(0, cellTexts.length - 5); i < cellTexts.length; i++) {
-            const txt = cellTexts[i];
-            if (txt && /^[A-ZÄÖÜa-zäöüß\s\.\-]+$/.test(txt) && txt.length > 3 && !txt.includes('VOR') && !txt.includes('TO BE')) {
-              name = txt;
-              break;
-            }
-          }
-        }
-
+        // Only add rows that have meaningful data
         if (kennzeichen || name) {
           results.push({
-            nr,
+            name,
+            kennzeichen,
             zeit,
-            flug,
             parkdatum,
             rueckgabe,
             personen,
             tage,
-            name,
+            flug,
             telefon,
-            kennzeichen
+            fahrzeug,
+            code,
+            type
           });
         }
       }
@@ -306,12 +248,12 @@ async function scrapeBookings(dateStr) {
       return results;
     });
 
-    // Also extract the current displayed date
+    // Extract the current displayed date
     const displayDate = await page.evaluate(() => {
-      const dateEl = document.querySelector('[class*="date"], .datum, h2, h3');
-      const body = document.body.innerText;
-      const match = body.match(/Datum:\s*(\d{2}\.\d{2}\.\d{4})/);
-      return match ? match[1] : new Date().toLocaleDateString('de-DE');
+      // Try to find the date from the page header/filter
+      const dateEl = document.querySelector('[data-role="datefilter"] .k-input, .entity-list-filter input[type="date"]');
+      if (dateEl && dateEl.value) return dateEl.value;
+      return new Date().toLocaleDateString('de-DE');
     });
 
     console.log(`[Scraper] Found ${bookings.length} bookings`);
