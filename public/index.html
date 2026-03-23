@@ -7,6 +7,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0a0a0a">
 <title>Label Print Tool</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23c0f73a'/><text x='16' y='23' font-size='20' font-weight='bold' text-anchor='middle' fill='%23000'>P</text></svg>">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap');
@@ -102,6 +104,68 @@
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
   @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
   .booking-card{animation:fadeUp .3s ease forwards;opacity:0}
+
+  /* ─── Top Tabs ─── */
+  .top-tabs{display:flex;border-bottom:1px solid var(--border);background:var(--bg);position:sticky;top:56px;z-index:99}
+  .top-tab{flex:1;padding:12px;background:none;border:none;border-bottom:2px solid transparent;color:var(--text2);font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
+  .top-tab.active{color:var(--accent);border-bottom-color:var(--accent);background:var(--accent-dim)}
+  .top-tab:active{opacity:.7}
+  .tab-content{display:none;flex:1;flex-direction:column;overflow:hidden}
+  .tab-content.active{display:flex}
+
+  /* ─── Vimcar Tracker ─── */
+  .vim-wrapper{display:flex;flex-direction:column;height:calc(100dvh - 56px - 46px);overflow:hidden}
+  .vim-controls{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;gap:8px;border-bottom:1px solid var(--border);flex-shrink:0}
+  .vim-controls-left{display:flex;align-items:center;gap:8px}
+  .vim-controls-right{display:flex;align-items:center}
+  .vim-select{background:var(--surface);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:8px;font-size:12px;font-family:'JetBrains Mono',monospace;outline:none}
+  .vim-select:focus{border-color:var(--accent)}
+
+  .btn-vim{padding:8px 16px;border:none;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;letter-spacing:.3px}
+  .btn-vim:active{transform:scale(.96)}
+  .btn-vim-start{background:var(--accent);color:#000}
+  .btn-vim-stop{background:rgba(239,68,68,0.15);color:#f87171}
+
+  .vim-live-pill{display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:5px 12px 5px 8px;font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--text2)}
+  .vim-dot{width:7px;height:7px;border-radius:50%;background:var(--text3);transition:background .3s}
+  .vim-dot.live{background:#4ade80;animation:vimPulse 2s infinite}
+  .vim-dot.error{background:#f87171}
+  @keyframes vimPulse{0%,100%{box-shadow:0 0 0 0 rgba(74,222,128,0.4)}50%{box-shadow:0 0 0 5px rgba(74,222,128,0)}}
+
+  .vim-map-wrap{position:relative;flex:1;min-height:200px;background:#111}
+  #vimMap{width:100%;height:100%}
+  .vim-map-stats{position:absolute;top:8px;right:8px;z-index:500;display:flex;gap:6px}
+  .vim-stat{background:rgba(10,10,10,0.85);backdrop-filter:blur(6px);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--text2)}
+  .vim-stat strong{color:var(--accent)}
+
+  .vim-vehicles{overflow-y:auto;flex-shrink:0;max-height:40%;border-top:1px solid var(--border);padding:8px}
+  .vim-empty{text-align:center;padding:32px 16px;color:var(--text3);font-size:13px;line-height:1.6}
+
+  .vim-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:6px;cursor:pointer;transition:border-color .2s}
+  .vim-card:active{border-color:var(--accent)}
+  .vim-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+  .vim-card-plate{font-family:'JetBrains Mono',monospace;font-size:17px;font-weight:800;letter-spacing:1.5px;color:var(--accent);background:var(--accent-dim);padding:1px 8px;border-radius:4px}
+  .vim-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:.5px}
+  .vim-badge-moving{background:rgba(74,222,128,0.12);color:#4ade80}
+  .vim-badge-parked{background:rgba(107,114,128,0.15);color:#9ca3af}
+  .vim-badge-offline{background:rgba(248,113,113,0.12);color:#f87171}
+  .vim-card-model{font-size:12px;color:var(--text2);margin-bottom:4px}
+  .vim-card-loc{font-size:11px;color:var(--text);line-height:1.4;display:flex;gap:6px}
+  .vim-card-speed{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:800;color:var(--accent);margin-top:6px}
+  .vim-card-speed .unit{font-size:11px;font-weight:500;color:var(--text3)}
+  .vim-card-time{font-size:10px;color:var(--text3);margin-top:4px;font-family:'JetBrains Mono',monospace}
+
+  /* Leaflet dark overrides */
+  .leaflet-container{background:#111!important}
+  .leaflet-tile-pane{filter:brightness(0.7) contrast(1.1) saturate(0.8)}
+  .leaflet-control-zoom a{background:var(--surface)!important;color:var(--text)!important;border-color:var(--border)!important}
+  .leaflet-control-attribution{background:rgba(10,10,10,0.7)!important;color:var(--text3)!important;font-size:9px!important}
+  .leaflet-control-attribution a{color:var(--accent)!important}
+  .vim-marker{background:none!important;border:none!important}
+  .vim-tooltip{background:rgba(10,10,10,0.9)!important;border:1px solid rgba(192,247,58,0.3)!important;border-radius:4px!important;color:var(--text)!important;font-family:'JetBrains Mono',monospace!important;font-size:10px!important;font-weight:700!important;letter-spacing:1px!important;padding:2px 6px!important}
+  .vim-popup .leaflet-popup-content-wrapper{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.6)}
+  .vim-popup .leaflet-popup-tip{background:var(--surface)}
+  .vim-popup .leaflet-popup-content{margin:10px 14px;font-size:12px;font-family:'DM Sans',sans-serif}
 </style>
 </head>
 <body>
@@ -118,20 +182,75 @@
 <div class="app" id="app">
   <div class="header">
     <div class="header-icon">P</div><h1>Label Print Tool<span>by Park King</span></h1>
-    <div class="header-right"><button class="header-btn" onclick="loadBookings(true)">↻ Neu laden</button><button class="header-btn" onclick="doLogout()">Logout</button></div>
-  </div>
-  <div class="main">
-    <!-- Company Selector -->
-    <div class="company-select">
-      <button class="company-btn active" id="btn-parkking" onclick="selectCompany('parkking')">🅿️ Park King</button>
-      <button class="company-btn" id="btn-psfmsf" onclick="selectCompany('psfmsf')">✈️ PSF/MSF</button>
+    <div class="header-right">
+      <button class="header-btn" id="headerRefreshBtn" onclick="loadBookings(true)">↻ Neu laden</button>
+      <button class="header-btn" onclick="doLogout()">Logout</button>
     </div>
+  </div>
 
-    <div class="search-bar"><span class="search-icon">🔍</span><input type="text" id="searchInput" placeholder="Kennzeichen oder Name suchen..." oninput="filterBookings()"></div>
-    <div class="status-bar" id="statusBar"></div>
-    <div id="loadingState" class="loading" style="display:none"><div class="spinner"></div><div class="loading-text">Check-In Buchungen werden geladen...</div></div>
-    <div id="errorState" class="empty" style="display:none"></div>
-    <div id="bookingList" class="booking-list"></div>
+  <!-- ─── Top Tab Bar ─── -->
+  <div class="top-tabs">
+    <button class="top-tab active" id="tab-labels" onclick="switchTab('labels')">🏷️ Labels</button>
+    <button class="top-tab" id="tab-tracker" onclick="switchTab('tracker')">🚐 Bus-Tracker</button>
+  </div>
+
+  <!-- ═══════════════ LABELS TAB ═══════════════ -->
+  <div class="tab-content active" id="tabLabels">
+    <div class="main">
+      <!-- Company Selector -->
+      <div class="company-select">
+        <button class="company-btn active" id="btn-parkking" onclick="selectCompany('parkking')">🅿️ Park King</button>
+        <button class="company-btn" id="btn-psfmsf" onclick="selectCompany('psfmsf')">✈️ PSF/MSF</button>
+      </div>
+
+      <div class="search-bar"><span class="search-icon">🔍</span><input type="text" id="searchInput" placeholder="Kennzeichen oder Name suchen..." oninput="filterBookings()"></div>
+      <div class="status-bar" id="statusBar"></div>
+      <div id="loadingState" class="loading" style="display:none"><div class="spinner"></div><div class="loading-text">Check-In Buchungen werden geladen...</div></div>
+      <div id="errorState" class="empty" style="display:none"></div>
+      <div id="bookingList" class="booking-list"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ VIMCAR TRACKER TAB ═══════════════ -->
+  <div class="tab-content" id="tabTracker">
+    <div class="vim-wrapper">
+      <!-- Controls -->
+      <div class="vim-controls">
+        <div class="vim-controls-left">
+          <select id="vimInterval" class="vim-select">
+            <option value="15">15s</option>
+            <option value="20" selected>20s</option>
+            <option value="30">30s</option>
+            <option value="60">60s</option>
+          </select>
+          <button class="btn-vim btn-vim-start" id="vimStartBtn" onclick="vimStart()">▶ Live Tracking</button>
+          <button class="btn-vim btn-vim-stop" id="vimStopBtn" onclick="vimStop()" style="display:none">■ Stop</button>
+        </div>
+        <div class="vim-controls-right">
+          <div class="vim-live-pill" id="vimLivePill">
+            <span class="vim-dot" id="vimDot"></span>
+            <span id="vimStatusText">Bereit</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Map -->
+      <div class="vim-map-wrap">
+        <div id="vimMap"></div>
+        <div class="vim-map-stats">
+          <div class="vim-stat" id="vimCount">0 Fahrzeuge</div>
+          <div class="vim-stat" id="vimTime">–</div>
+        </div>
+      </div>
+
+      <!-- Vehicle Cards (scrollable) -->
+      <div class="vim-vehicles" id="vimVehicles">
+        <div class="vim-empty">
+          <div style="font-size:32px;margin-bottom:8px">🚐</div>
+          <div>Drücke <strong>▶ Live Tracking</strong> um Fahrzeuge zu laden</div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -299,6 +418,143 @@ function renderLabel() {
 function downloadLabel(){const c=document.getElementById('labelCanvas'),p=(document.getElementById('editPlate').value||'label').trim().toUpperCase().replace(/[\s\.]/g,'-');const a=document.createElement('a');a.download=`label-${p}-${Date.now()}.png`;a.href=c.toDataURL('image/png');a.click();showToast('Gespeichert ✓');}
 async function shareLabel(){try{const b=await new Promise(r=>document.getElementById('labelCanvas').toBlob(r,'image/png'));const f=new File([b],'label.png',{type:'image/png'});if(navigator.canShare?.({files:[f]})){await navigator.share({files:[f],title:'Label'});}else{downloadLabel();}}catch(e){downloadLabel();}}
 function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
+
+// ═══════════════════════════════════════════════════════════════
+//  Tab Switching
+// ═══════════════════════════════════════════════════════════════
+function switchTab(tab) {
+  document.querySelectorAll('.top-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+
+  if (tab === 'labels') {
+    document.getElementById('tabLabels').classList.add('active');
+    document.getElementById('headerRefreshBtn').style.display = '';
+  } else {
+    document.getElementById('tabTracker').classList.add('active');
+    document.getElementById('headerRefreshBtn').style.display = 'none';
+    vimInitMap();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  Vimcar Bus-Tracker
+// ═══════════════════════════════════════════════════════════════
+let vimMap = null;
+let vimMarkers = {};
+let vimVehicles = [];
+let vimRunning = false;
+let vimTimer = null;
+
+function vimInitMap() {
+  if (vimMap) { vimMap.invalidateSize(); return; }
+  vimMap = L.map('vimMap', { center: [53.696, 9.989], zoom: 12, zoomControl: true });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© <a href="https://openstreetmap.org/copyright">OSM</a> · CARTO',
+    subdomains: 'abcd', maxZoom: 19
+  }).addTo(vimMap);
+  setTimeout(() => vimMap.invalidateSize(), 300);
+}
+
+function vimIcon(status) {
+  const c = status === 'Unterwegs' ? '#4ade80' : status === 'Parkend' ? '#6b7280' : '#f59e0b';
+  const pulse = status === 'Unterwegs' ? `<div style="position:absolute;inset:-4px;border-radius:50%;background:${c};opacity:.3;animation:vimPulse 2s infinite"></div>` : '';
+  return L.divIcon({
+    className: 'vim-marker',
+    html: `<div style="position:relative;width:24px;height:24px">${pulse}<div style="width:24px;height:24px;border-radius:50%;background:${c};border:3px solid rgba(10,10,10,.8);box-shadow:0 2px 8px rgba(0,0,0,.5);display:grid;place-items:center;position:relative;z-index:2"><svg width="11" height="11" viewBox="0 0 24 24" fill="#fff"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></svg></div></div>`,
+    iconSize: [24, 24], iconAnchor: [12, 12], popupAnchor: [0, -16]
+  });
+}
+
+function vimUpdateMap(vehicles) {
+  if (!vimMap) return;
+  const current = new Set();
+  vehicles.forEach(v => {
+    if (!v.lat || !v.lng) return;
+    current.add(v.plate);
+    const popup = `<div style="min-width:160px"><div style="font-weight:800;font-size:14px;font-family:'JetBrains Mono',monospace;letter-spacing:1px;margin-bottom:4px">${v.plate}</div>${v.model?`<div style="color:#777;font-size:11px;margin-bottom:6px">${v.model}</div>`:''}<div style="display:flex;gap:6px;align-items:center;margin-bottom:4px"><span style="background:${v.status==='Unterwegs'?'rgba(74,222,128,.15)':'rgba(107,114,128,.15)'};color:${v.status==='Unterwegs'?'#4ade80':'#9ca3af'};padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700">${v.status||'?'}</span>${v.speed?`<span style="font-weight:700;color:#c0f73a">${v.speed}</span>`:''}</div>${v.location?`<div style="font-size:11px;color:#ccc;line-height:1.4">${v.location}</div>`:''}<div style="font-size:9px;color:#555;margin-top:4px">${new Date(v.timestamp).toLocaleTimeString('de-DE')}</div></div>`;
+
+    if (vimMarkers[v.plate]) {
+      vimMarkers[v.plate].setLatLng([v.lat, v.lng]).setIcon(vimIcon(v.status));
+      vimMarkers[v.plate].getPopup().setContent(popup);
+    } else {
+      vimMarkers[v.plate] = L.marker([v.lat, v.lng], { icon: vimIcon(v.status) })
+        .addTo(vimMap)
+        .bindPopup(popup, { className: 'vim-popup' })
+        .bindTooltip(v.plate, { permanent: true, direction: 'top', offset: [0, -14], className: 'vim-tooltip' });
+    }
+  });
+  Object.keys(vimMarkers).forEach(p => { if (!current.has(p)) { vimMap.removeLayer(vimMarkers[p]); delete vimMarkers[p]; } });
+}
+
+function vimUpdateCards(vehicles) {
+  const el = document.getElementById('vimVehicles');
+  if (!vehicles.length) { el.innerHTML = '<div class="vim-empty">Keine Fahrzeuge gefunden.</div>'; return; }
+  el.innerHTML = vehicles.map(v => {
+    const bc = v.status === 'Unterwegs' ? 'moving' : v.status === 'Parkend' ? 'parked' : 'offline';
+    const spd = parseInt(v.speed) || 0;
+    return `<div class="vim-card" onclick="vimFocus('${v.plate}')">
+      <div class="vim-card-top"><span class="vim-card-plate">${v.plate}</span><span class="vim-badge vim-badge-${bc}">${v.status||'?'}</span></div>
+      ${v.model?`<div class="vim-card-model">${v.model}</div>`:''}
+      ${v.location?`<div class="vim-card-loc"><span>📍</span><span>${v.location}</span></div>`:''}
+      ${spd>0?`<div class="vim-card-speed">${spd} <span class="unit">km/h</span></div>`:''}
+      <div class="vim-card-time">🕐 ${new Date(v.timestamp).toLocaleTimeString('de-DE')}</div>
+    </div>`;
+  }).join('');
+}
+
+function vimFocus(plate) {
+  const m = vimMarkers[plate];
+  if (m && vimMap) { vimMap.setView(m.getLatLng(), 15, { animate: true }); m.openPopup(); }
+}
+
+function vimFitAll() {
+  const arr = Object.values(vimMarkers);
+  if (!arr.length || !vimMap) return;
+  if (arr.length === 1) vimMap.setView(arr[0].getLatLng(), 14, { animate: true });
+  else vimMap.fitBounds(L.featureGroup(arr).getBounds().pad(0.15), { animate: true });
+}
+
+async function vimFetch() {
+  try {
+    const res = await fetch('/api/vimcar/vehicles?refresh=true', { headers: { 'X-Auth-Token': authToken } });
+    if (res.status === 401) { doLogout(); return; }
+    const data = await res.json();
+    if (data.error) throw new Error(data.detail || data.error);
+    vimVehicles = data.vehicles || [];
+    vimUpdateMap(vimVehicles);
+    vimUpdateCards(vimVehicles);
+    vimFitAll();
+    document.getElementById('vimCount').innerHTML = `<strong>${data.count}</strong> Fahrzeug${data.count!==1?'e':''}`;
+    document.getElementById('vimTime').textContent = new Date().toLocaleTimeString('de-DE');
+    showToast(data.count + ' Fahrzeug' + (data.count!==1?'e':'') + ' geladen ✓');
+  } catch (e) {
+    showToast('⚠ ' + e.message);
+    console.error('[Vimcar]', e);
+  }
+}
+
+function vimStart() {
+  if (vimRunning) return;
+  vimRunning = true;
+  const sec = parseInt(document.getElementById('vimInterval').value) || 20;
+  document.getElementById('vimStartBtn').style.display = 'none';
+  document.getElementById('vimStopBtn').style.display = '';
+  document.getElementById('vimDot').classList.add('live');
+  document.getElementById('vimStatusText').textContent = 'Live';
+  vimInitMap();
+  vimFetch();
+  vimTimer = setInterval(vimFetch, sec * 1000);
+}
+
+function vimStop() {
+  vimRunning = false;
+  if (vimTimer) { clearInterval(vimTimer); vimTimer = null; }
+  document.getElementById('vimStartBtn').style.display = '';
+  document.getElementById('vimStopBtn').style.display = 'none';
+  document.getElementById('vimDot').classList.remove('live');
+  document.getElementById('vimStatusText').textContent = 'Gestoppt';
+}
 </script>
 </body>
 </html>
