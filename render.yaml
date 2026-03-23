@@ -12,6 +12,10 @@ services:
         sync: false
       - key: PARKINGPRO_PASSWORD
         sync: false
+      - key: VIMCAR_EMAIL
+        sync: false
+      - key: VIMCAR_PASSWORD
+        sync: false
       - key: APP_PASSWORD
         sync: false
       - key: PUPPETEER_SKIP_CHROMIUM_DOWNLOAD
