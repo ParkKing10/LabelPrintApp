@@ -192,20 +192,18 @@ async function scrapeBookings(companyId) {
       console.log('[Scraper] DEBUG - URL:', page.url());
     }
 
-    // Step 5: Extract bookings
-    console.log('[Scraper] Step 5: Extracting bookings...');
-    const bookings = await page.evaluate(() => {
+    // Step 5: Extract basic booking data from table
+    console.log(`[Scraper][${company.name}] Step 5: Extracting bookings from table...`);
+    const basicBookings = await page.evaluate(() => {
       const rows = document.querySelectorAll('tr[data-uid]');
       const results = [];
 
       for (const row of rows) {
-        // Helper: get text content of a cell by its data-field attribute
         const getField = (field) => {
           const cell = row.querySelector(`td[data-field="${field}"]`);
           return cell ? (cell.textContent || '').trim() : '';
         };
 
-        // Extract all relevant fields using exact data-field selectors
         const name = getField('fullName()').replace(/^ParkKing:\s*/i, '').trim();
         const kennzeichen = getField('car.licensePlate');
         const zeit = getField('dayView.time');
@@ -217,45 +215,91 @@ async function scrapeBookings(companyId) {
         const telefon = getField('contactInformation.phone');
         const fahrzeug = getField('car.description');
         const code = getField('reservationCode');
+        const uid = row.getAttribute('data-uid');
 
-        // Determine type from row CSS class
         const classList = row.className || '';
         let type = 'unknown';
         if (classList.includes('bg-success')) type = 'checkin';
         if (classList.includes('bg-danger')) type = 'checkout';
 
-        // Only add rows that have meaningful data
         if (kennzeichen || name) {
           results.push({
-            name,
-            kennzeichen,
-            zeit,
-            parkdatum,
-            rueckgabe,
-            personen,
-            tage,
-            flug,
-            telefon,
-            fahrzeug,
-            code,
-            type
+            name, kennzeichen, zeit, parkdatum, rueckgabe,
+            personen, tage, flug, telefon, fahrzeug, code, type, uid
           });
         }
       }
-
       return results;
     });
 
+    console.log(`[Scraper][${company.name}] Found ${basicBookings.length} bookings total`);
+
+    // Step 6: For each CHECK-IN booking, click the row to open detail panel
+    // and scrape the departure date+time from the detail view
+    const checkinBookings = basicBookings.filter(b => b.type === 'checkin');
+    console.log(`[Scraper][${company.name}] Step 6: Getting departure times for ${checkinBookings.length} check-ins...`);
+
+    for (let i = 0; i < checkinBookings.length; i++) {
+      const booking = checkinBookings[i];
+      try {
+        // Click the row to open detail panel
+        const clicked = await page.evaluate((uid) => {
+          const row = document.querySelector(`tr[data-uid="${uid}"]`);
+          if (row) { row.click(); return true; }
+          return false;
+        }, booking.uid);
+
+        if (!clicked) {
+          console.log(`[Scraper] Could not click row for ${booking.kennzeichen}`);
+          continue;
+        }
+
+        // Wait for detail panel to load with departure date
+        await page.waitForFunction(() => {
+          const el = document.querySelector('span[data-bind*="selectedEntity.departureDate"][data-format="g"]');
+          return el && el.textContent.trim().length > 0;
+        }, { timeout: 8000 }).catch(() => {});
+
+        await new Promise(r => setTimeout(r, 500));
+
+        // Extract the full departure datetime (e.g. "02.04.2026 22:50")
+        const departureFull = await page.evaluate(() => {
+          const el = document.querySelector('span[data-bind*="selectedEntity.departureDate"][data-format="g"]');
+          return el ? el.textContent.trim() : '';
+        });
+
+        if (departureFull) {
+          checkinBookings[i].rueckgabeVoll = departureFull;
+          // Split into date and time
+          const parts = departureFull.split(' ');
+          if (parts.length >= 2) {
+            checkinBookings[i].rueckgabeDatum = parts[0];
+            checkinBookings[i].rueckgabeZeit = parts[1];
+          }
+        }
+
+        console.log(`[Scraper] ${i+1}/${checkinBookings.length} ${booking.kennzeichen}: Rückgabe=${departureFull}`);
+      } catch (err) {
+        console.log(`[Scraper] Error getting detail for ${booking.kennzeichen}:`, err.message);
+      }
+    }
+
     // Extract the current displayed date
     const displayDate = await page.evaluate(() => {
-      // Try to find the date from the page header/filter
       const dateEl = document.querySelector('[data-role="datefilter"] .k-input, .entity-list-filter input[type="date"]');
       if (dateEl && dateEl.value) return dateEl.value;
       return new Date().toLocaleDateString('de-DE');
     });
 
-    console.log(`[Scraper] Found ${bookings.length} bookings`);
-    return { bookings, date: displayDate, scraped_at: new Date().toISOString() };
+    // Return ALL bookings (with type info) so frontend can filter
+    const allBookings = basicBookings.map(b => {
+      const checkin = checkinBookings.find(c => c.uid === b.uid);
+      if (checkin) return checkin;
+      return b;
+    });
+
+    console.log(`[Scraper][${company.name}] Done! ${checkinBookings.length} check-ins with departure times`);
+    return { bookings: allBookings, date: displayDate, scraped_at: new Date().toISOString() };
 
   } catch (error) {
     console.error('[Scraper] Error:', error.message);
