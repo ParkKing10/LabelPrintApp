@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0a0a">
+<title>ParkingPro Label</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23c0f73a'/><text x='16' y='23' font-size='20' font-weight='bold' text-anchor='middle' fill='%23000'>P</text></svg>">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=DM+Sans:wght@400;500;600;700&display=swap');
+
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+  :root {
+    --bg:#0a0a0a; --surface:#141414; --surface2:#1c1c1c; --border:#262626;
+    --text:#e8e8e8; --text2:#777; --text3:#444;
+    --accent:#c0f73a; --accent-dim:rgba(192,247,58,0.1);
+    --green:#4ade80; --green-bg:rgba(74,222,128,0.1);
+    --red:#f87171; --red-bg:rgba(248,113,113,0.1);
+    --blue:#60a5fa; --blue-bg:rgba(96,165,250,0.1);
+    --r:12px;
+  }
+
+  html,body { height:100%; }
+  body {
+    font-family:'DM Sans',sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    overflow-x:hidden;
+  }
+
+  /* ── Login Screen ── */
+  .login-screen {
+    min-height:100dvh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+  }
+  .login-box {
+    width:100%;
+    max-width:360px;
+  }
+  .login-logo {
+    display:flex;
+    align-items:center;
+    gap:12px;
+    margin-bottom:32px;
+    justify-content:center;
+  }
+  .login-logo-icon {
+    width:48px;height:48px;
+    background:var(--accent);
+    border-radius:12px;
+    display:grid;place-items:center;
+    font-size:24px;font-weight:700;color:#000;
+    font-family:'JetBrains Mono',monospace;
+  }
+  .login-logo h1 {
+    font-family:'JetBrains Mono',monospace;
+    font-size:20px;font-weight:700;
+  }
+  .login-logo h1 span { color:var(--accent); }
+
+  /* ── Common Form ── */
+  .form-label {
+    display:block;font-size:11px;font-weight:600;
+    text-transform:uppercase;letter-spacing:1px;
+    color:var(--text2);margin-bottom:6px;
+    font-family:'JetBrains Mono',monospace;
+  }
+  .form-input {
+    width:100%;padding:14px 16px;
+    background:var(--surface);border:1.5px solid var(--border);
+    border-radius:var(--r);color:var(--text);
+    font-family:'DM Sans',sans-serif;font-size:16px;
+    transition:border-color .2s;outline:none;
+  }
+  .form-input:focus { border-color:var(--accent); }
+  .form-input::placeholder { color:var(--text3); }
+  .form-group { margin-bottom:16px; }
+
+  .btn {
+    width:100%;padding:15px;border:none;border-radius:var(--r);
+    font-size:15px;font-weight:700;cursor:pointer;
+    font-family:'JetBrains Mono',monospace;
+    transition:transform .12s,opacity .12s;
+    letter-spacing:.3px;
+  }
+  .btn:active { transform:scale(.97);opacity:.9; }
+  .btn-accent { background:var(--accent);color:#000; }
+  .btn-outline { background:transparent;color:var(--accent);border:1.5px solid var(--accent); }
+  .btn-outline:active { background:var(--accent-dim); }
+  .btn-white { background:#fff;color:#000; }
+  .btn-ghost { background:transparent;color:var(--text2);font-weight:500;font-family:'DM Sans',sans-serif;font-size:14px; }
+  .btn-sm { padding:10px 16px;font-size:13px;width:auto; }
+
+  .error-msg { color:var(--red);font-size:13px;margin-top:8px;text-align:center; }
+
+  /* ── App Shell ── */
+  .app { display:none; min-height:100dvh; flex-direction:column; }
+  .app.active { display:flex; }
+
+  .header {
+    padding:14px 20px;
+    display:flex;align-items:center;gap:10px;
+    border-bottom:1px solid var(--border);
+    position:sticky;top:0;background:var(--bg);z-index:100;
+  }
+  .header-icon {
+    width:32px;height:32px;background:var(--accent);
+    border-radius:8px;display:grid;place-items:center;
+    font-size:16px;color:#000;font-weight:700;
+    font-family:'JetBrains Mono',monospace;
+  }
+  .header h1 { font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:600; }
+  .header h1 span { color:var(--accent); }
+  .header-right { margin-left:auto;display:flex;gap:8px;align-items:center; }
+  .header-btn {
+    background:var(--surface);border:1px solid var(--border);
+    color:var(--text2);padding:8px 12px;border-radius:8px;
+    font-size:12px;cursor:pointer;font-family:'JetBrains Mono',monospace;
+    transition:border-color .2s;
+  }
+  .header-btn:active { border-color:var(--accent);color:var(--accent); }
+
+  .main { flex:1;padding:16px 20px;max-width:600px;margin:0 auto;width:100%; }
+
+  /* ── Status Bar ── */
+  .status-bar {
+    display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;
+  }
+  .status-chip {
+    padding:6px 12px;border-radius:8px;font-size:12px;
+    font-family:'JetBrains Mono',monospace;font-weight:600;
+  }
+  .chip-green { background:var(--green-bg);color:var(--green); }
+  .chip-blue { background:var(--blue-bg);color:var(--blue); }
+
+  /* ── Booking List ── */
+  .booking-list { display:flex;flex-direction:column;gap:8px; }
+
+  .booking-card {
+    background:var(--surface);
+    border:1.5px solid var(--border);
+    border-radius:var(--r);
+    padding:14px 16px;
+    cursor:pointer;
+    transition:border-color .2s,background .2s;
+    position:relative;
+    overflow:hidden;
+  }
+  .booking-card:active { border-color:var(--accent);background:var(--surface2); }
+  .booking-card.selected { border-color:var(--accent);background:var(--accent-dim); }
+
+  .booking-top {
+    display:flex;justify-content:space-between;align-items:flex-start;
+    margin-bottom:8px;
+  }
+  .booking-plate {
+    font-family:'JetBrains Mono',monospace;
+    font-size:18px;font-weight:700;letter-spacing:1px;
+  }
+  .booking-time {
+    font-family:'JetBrains Mono',monospace;
+    font-size:13px;color:var(--accent);font-weight:600;
+    background:var(--accent-dim);
+    padding:3px 8px;border-radius:6px;
+  }
+  .booking-details {
+    display:flex;gap:16px;flex-wrap:wrap;
+    font-size:13px;color:var(--text2);
+  }
+  .booking-detail { display:flex;align-items:center;gap:4px; }
+  .booking-detail strong { color:var(--text);font-weight:600; }
+
+  .booking-nr {
+    position:absolute;top:0;left:0;
+    background:var(--surface2);
+    font-family:'JetBrains Mono',monospace;
+    font-size:10px;color:var(--text3);
+    padding:2px 8px;border-radius:0 0 8px 0;
+  }
+
+  /* ── Loading ── */
+  .loading {
+    display:flex;flex-direction:column;
+    align-items:center;justify-content:center;
+    padding:60px 20px;gap:16px;
+  }
+  .spinner {
+    width:32px;height:32px;
+    border:3px solid var(--border);
+    border-top-color:var(--accent);
+    border-radius:50%;
+    animation:spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .loading-text { color:var(--text2);font-size:14px; }
+
+  /* ── Empty ── */
+  .empty { text-align:center;padding:48px 20px;color:var(--text2);font-size:14px; }
+
+  /* ── Label Modal (overlay) ── */
+  .modal-overlay {
+    display:none;position:fixed;inset:0;
+    background:rgba(0,0,0,.85);z-index:200;
+    overflow-y:auto;
+    -webkit-backdrop-filter:blur(8px);
+    backdrop-filter:blur(8px);
+  }
+  .modal-overlay.active { display:block; }
+  .modal-content {
+    max-width:420px;margin:24px auto;padding:20px;
+  }
+  .modal-header {
+    display:flex;justify-content:space-between;align-items:center;
+    margin-bottom:20px;
+  }
+  .modal-title {
+    font-family:'JetBrains Mono',monospace;
+    font-size:14px;font-weight:600;color:var(--text2);
+    text-transform:uppercase;letter-spacing:1px;
+  }
+  .modal-close {
+    background:var(--surface);border:1px solid var(--border);
+    color:var(--text2);width:36px;height:36px;
+    border-radius:8px;cursor:pointer;font-size:18px;
+    display:grid;place-items:center;
+  }
+
+  /* ── Type Toggle ── */
+  .type-toggle {
+    display:flex;background:var(--surface);
+    border-radius:var(--r);border:1.5px solid var(--border);
+    overflow:hidden;margin-bottom:16px;
+  }
+  .type-btn {
+    flex:1;padding:12px;text-align:center;
+    font-size:14px;font-weight:600;cursor:pointer;
+    transition:all .2s;background:transparent;
+    color:var(--text2);border:none;
+    font-family:'DM Sans',sans-serif;
+  }
+  .type-btn.active-in { background:var(--green-bg);color:var(--green); }
+  .type-btn.active-out { background:var(--red-bg);color:var(--red); }
+
+  /* ── Label Preview ── */
+  .label-wrap {
+    background:var(--surface);border:1.5px solid var(--border);
+    border-radius:var(--r);padding:16px;
+    display:flex;justify-content:center;margin-bottom:16px;
+  }
+  .label-frame {
+    background:#fff;border-radius:4px;overflow:hidden;
+    box-shadow:0 4px 24px rgba(0,0,0,.5);
+  }
+  #labelCanvas { display:block; }
+
+  .btn-group { display:flex;flex-direction:column;gap:8px; }
+
+  /* ── Toast ── */
+  .toast {
+    position:fixed;bottom:30px;left:50%;
+    transform:translateX(-50%) translateY(80px);
+    background:var(--surface2);border:1px solid var(--accent);
+    color:var(--accent);padding:12px 24px;border-radius:50px;
+    font-size:13px;font-weight:600;
+    font-family:'JetBrains Mono',monospace;
+    opacity:0;transition:all .3s ease;z-index:1000;
+    pointer-events:none;white-space:nowrap;
+  }
+  .toast.show { opacity:1;transform:translateX(-50%) translateY(0); }
+
+  /* ── Animations ── */
+  @keyframes fadeUp {
+    from { opacity:0;transform:translateY(12px); }
+    to { opacity:1;transform:translateY(0); }
+  }
+  .booking-card {
+    animation:fadeUp .3s ease forwards;
+    opacity:0;
+  }
+  .booking-card:nth-child(1) { animation-delay:.05s; }
+  .booking-card:nth-child(2) { animation-delay:.08s; }
+  .booking-card:nth-child(3) { animation-delay:.11s; }
+  .booking-card:nth-child(4) { animation-delay:.14s; }
+  .booking-card:nth-child(5) { animation-delay:.17s; }
+  .booking-card:nth-child(6) { animation-delay:.20s; }
+  .booking-card:nth-child(7) { animation-delay:.23s; }
+  .booking-card:nth-child(8) { animation-delay:.26s; }
+  .booking-card:nth-child(9) { animation-delay:.29s; }
+  .booking-card:nth-child(10) { animation-delay:.32s; }
+</style>
+</head>
+<body>
+
+<!-- ═══════ LOGIN ═══════ -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="login-logo-icon">P</div>
+      <h1>Parking<span>Pro</span> Label</h1>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Team-Passwort</label>
+      <input type="password" id="loginPass" class="form-input" placeholder="Passwort eingeben" autofocus>
+    </div>
+    <button class="btn btn-accent" onclick="doLogin()">EINLOGGEN</button>
+    <div id="loginError" class="error-msg" style="display:none;"></div>
+  </div>
+</div>
+
+<!-- ═══════ APP ═══════ -->
+<div class="app" id="app">
+  <div class="header">
+    <div class="header-icon">P</div>
+    <h1>Parking<span>Pro</span> Label</h1>
+    <div class="header-right">
+      <button class="header-btn" onclick="loadBookings()">↻ Laden</button>
+      <button class="header-btn" onclick="doLogout()">Logout</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="status-bar" id="statusBar"></div>
+
+    <div id="loadingState" class="loading" style="display:none;">
+      <div class="spinner"></div>
+      <div class="loading-text">Buchungen werden geladen...</div>
+    </div>
+
+    <div id="errorState" class="empty" style="display:none;"></div>
+
+    <div id="bookingList" class="booking-list"></div>
+  </div>
+</div>
+
+<!-- ═══════ LABEL MODAL ═══════ -->
+<div class="modal-overlay" id="labelModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div class="modal-title">Label erstellen</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+
+    <!-- Type toggle -->
+    <div class="type-toggle">
+      <button class="type-btn active-in" id="btnIn" onclick="setType('checkin')">▶ Check-in</button>
+      <button class="type-btn" id="btnOut" onclick="setType('checkout')">◼ Check-out</button>
+    </div>
+
+    <!-- Optional spot field -->
+    <div class="form-group">
+      <label class="form-label">Stellplatz <span style="color:#444">(optional)</span></label>
+      <input type="text" id="spotInput" class="form-input" placeholder="z.B. A-12" autocomplete="off">
+    </div>
+
+    <!-- Preview -->
+    <div class="label-wrap">
+      <div class="label-frame">
+        <canvas id="labelCanvas"></canvas>
+      </div>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn btn-white" onclick="downloadLabel()">📲 ALS BILD SPEICHERN</button>
+      <button class="btn btn-outline" onclick="shareLabel()">↗ TEILEN / DRUCKEN</button>
+      <button class="btn btn-ghost" onclick="closeModal()">← Zurück zur Liste</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<canvas id="labelCanvas" style="display:none;"></canvas>
+
+<script>
+// ─── State ────────────────────────────────────────────────────
+let authToken = localStorage.getItem('pp_token') || '';
+let bookings = [];
+let currentBooking = null;
+let currentType = 'checkin';
+
+// ─── Init ─────────────────────────────────────────────────────
+if (authToken) {
+  showApp();
+  loadBookings();
+} else {
+  document.getElementById('loginScreen').style.display = 'flex';
+}
+
+// Enter key on login
+document.getElementById('loginPass').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+
+// ─── Auth ─────────────────────────────────────────────────────
+async function doLogin() {
+  const pass = document.getElementById('loginPass').value.trim();
+  if (!pass) return;
+
+  try {
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pass })
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      authToken = data.token;
+      localStorage.setItem('pp_token', authToken);
+      showApp();
+      loadBookings();
+    } else {
+      showLoginError('Falsches Passwort');
+    }
+  } catch (e) {
+    showLoginError('Verbindungsfehler');
+  }
+}
+
+function doLogout() {
+  authToken = '';
+  localStorage.removeItem('pp_token');
+  document.getElementById('app').classList.remove('active');
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('loginPass').value = '';
+}
+
+function showApp() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').classList.add('active');
+}
+
+function showLoginError(msg) {
+  const el = document.getElementById('loginError');
+  el.textContent = msg;
+  el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 3000);
+}
+
+// ─── Load Bookings ────────────────────────────────────────────
+async function loadBookings() {
+  const list = document.getElementById('bookingList');
+  const loading = document.getElementById('loadingState');
+  const errorEl = document.getElementById('errorState');
+
+  list.innerHTML = '';
+  loading.style.display = 'flex';
+  errorEl.style.display = 'none';
+
+  try {
+    const res = await fetch('/api/bookings', {
+      headers: { 'X-Auth-Token': authToken }
+    });
+
+    if (res.status === 401) {
+      doLogout();
+      return;
+    }
+
+    const data = await res.json();
+
+    if (data.error) {
+      throw new Error(data.detail || data.error);
+    }
+
+    bookings = data.bookings || [];
+    loading.style.display = 'none';
+
+    // Status bar
+    document.getElementById('statusBar').innerHTML = `
+      <div class="status-chip chip-blue">${data.date || 'Heute'}</div>
+      <div class="status-chip chip-green">${bookings.length} Buchungen</div>
+    `;
+
+    if (bookings.length === 0) {
+      errorEl.textContent = 'Keine Buchungen für heute gefunden.';
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    renderBookings();
+    showToast(bookings.length + ' Buchungen geladen ✓');
+
+  } catch (e) {
+    loading.style.display = 'none';
+    errorEl.innerHTML = `
+      <div style="margin-bottom:8px;">⚠️ Fehler beim Laden</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:16px;">${e.message}</div>
+      <button class="btn btn-accent btn-sm" onclick="loadBookings()" style="display:inline-block;width:auto;">Nochmal versuchen</button>
+    `;
+    errorEl.style.display = 'block';
+  }
+}
+
+// ─── Render Bookings ──────────────────────────────────────────
+function renderBookings() {
+  const list = document.getElementById('bookingList');
+  list.innerHTML = bookings.map((b, i) => `
+    <div class="booking-card" onclick="openLabel(${i})" style="animation-delay:${i * 0.03 + 0.05}s">
+      ${b.nr ? `<div class="booking-nr">#${b.nr}</div>` : ''}
+      <div class="booking-top">
+        <div class="booking-plate">${b.kennzeichen || '—'}</div>
+        ${b.zeit ? `<div class="booking-time">${b.zeit}</div>` : ''}
+      </div>
+      <div class="booking-details">
+        ${b.name ? `<div class="booking-detail">👤 <strong>${b.name}</strong></div>` : ''}
+        ${b.parkdatum ? `<div class="booking-detail">📅 ${b.parkdatum}</div>` : ''}
+        ${b.rueckgabe ? `<div class="booking-detail">↩ ${b.rueckgabe}</div>` : ''}
+        ${b.tage ? `<div class="booking-detail">${b.tage}d</div>` : ''}
+        ${b.personen ? `<div class="booking-detail">${b.personen} Pers.</div>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+// ─── Label Modal ──────────────────────────────────────────────
+function openLabel(idx) {
+  currentBooking = bookings[idx];
+  currentType = 'checkin';
+  document.getElementById('btnIn').className = 'type-btn active-in';
+  document.getElementById('btnOut').className = 'type-btn';
+  document.getElementById('spotInput').value = '';
+  document.getElementById('labelModal').classList.add('active');
+  renderLabel();
+}
+
+function closeModal() {
+  document.getElementById('labelModal').classList.remove('active');
+}
+
+function setType(type) {
+  currentType = type;
+  document.getElementById('btnIn').className = type === 'checkin' ? 'type-btn active-in' : 'type-btn';
+  document.getElementById('btnOut').className = type === 'checkout' ? 'type-btn active-out' : 'type-btn';
+  renderLabel();
+}
+
+// Update label when spot changes
+document.getElementById('spotInput').addEventListener('input', () => renderLabel());
+
+// ─── Render Label on Canvas ───────────────────────────────────
+function renderLabel() {
+  const b = currentBooking;
+  if (!b) return;
+
+  const spot = document.getElementById('spotInput').value.trim();
+  const isOut = currentType === 'checkout';
+
+  // 60x40mm at 300dpi = 709x472
+  const W = 709, H = 472;
+  const canvas = document.getElementById('labelCanvas');
+  canvas.style.display = 'block';
+  canvas.width = W;
+  canvas.height = H;
+  canvas.style.width = '100%';
+  canvas.style.maxWidth = '340px';
+  canvas.style.height = 'auto';
+
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, W, H);
+
+  // ── Top bar
+  ctx.fillStyle = '#111';
+  ctx.fillRect(0, 0, W, 66);
+
+  // Type badge
+  ctx.fillStyle = isOut ? '#f87171' : '#4ade80';
+  ctx.font = 'bold 28px "Helvetica Neue", Arial, sans-serif';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(isOut ? '◼ CHECK-OUT' : '▶ CHECK-IN', 20, 33);
+
+  // Time & Date right
+  ctx.fillStyle = '#bbb';
+  ctx.font = '20px "Helvetica Neue", Arial, sans-serif';
+  ctx.textAlign = 'right';
+  const dateStr = b.parkdatum || new Date().toLocaleDateString('de-DE');
+  ctx.fillText(dateStr + (b.zeit ? '  ' + b.zeit : ''), W - 20, 33);
+  ctx.textAlign = 'left';
+
+  // ── Plate
+  ctx.fillStyle = '#000';
+  ctx.font = 'bold 66px "Helvetica Neue", Arial, sans-serif';
+  ctx.textBaseline = 'top';
+  ctx.fillText(b.kennzeichen || '—', 20, 86);
+
+  // Separator
+  const plateW = ctx.measureText(b.kennzeichen || '—').width;
+  ctx.fillStyle = '#e0e0e0';
+  ctx.fillRect(20, 162, Math.min(plateW, W - 40), 2);
+
+  // ── Name
+  ctx.fillStyle = '#333';
+  ctx.font = '500 30px "Helvetica Neue", Arial, sans-serif';
+  ctx.fillText(b.name || '', 20, 178);
+
+  // ── Return date row
+  if (b.rueckgabe) {
+    ctx.fillStyle = '#888';
+    ctx.font = '20px "Helvetica Neue", Arial, sans-serif';
+    ctx.fillText('Rückgabe: ' + b.rueckgabe, 20, 224);
+  }
+
+  // ── Details row
+  let detailY = 260;
+  ctx.fillStyle = '#999';
+  ctx.font = '18px "Helvetica Neue", Arial, sans-serif';
+  const details = [];
+  if (b.personen) details.push(b.personen + ' Pers.');
+  if (b.tage) details.push(b.tage + ' Tage');
+  if (b.nr) details.push('#' + b.nr);
+  if (details.length) ctx.fillText(details.join('  ·  '), 20, detailY);
+
+  // ── Spot (right side, big)
+  if (spot) {
+    ctx.fillStyle = '#999';
+    ctx.font = '16px "Helvetica Neue", Arial, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText('STELLPLATZ', W - 20, 178);
+    ctx.fillStyle = '#000';
+    ctx.font = 'bold 36px "Helvetica Neue", Arial, sans-serif';
+    ctx.fillText(spot, W - 20, 200);
+    ctx.textAlign = 'left';
+  }
+
+  // ── Bottom bar
+  ctx.fillStyle = '#f5f5f5';
+  ctx.fillRect(0, H - 48, W, 48);
+  ctx.fillStyle = '#bbb';
+  ctx.font = '16px "Helvetica Neue", Arial, sans-serif';
+  ctx.fillText('ParkDirect24', 20, H - 22);
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#ccc';
+  ctx.font = '14px "Helvetica Neue", Arial, sans-serif';
+  ctx.fillText(new Date().toLocaleString('de-DE', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }), W - 20, H - 22);
+  ctx.textAlign = 'left';
+}
+
+// ─── Download / Share ─────────────────────────────────────────
+function downloadLabel() {
+  const canvas = document.getElementById('labelCanvas');
+  const plate = (currentBooking?.kennzeichen || 'label').replace(/[\s\.]/g, '-');
+  const link = document.createElement('a');
+  link.download = `label-${plate}-${Date.now()}.png`;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+  showToast('Bild gespeichert ✓');
+}
+
+async function shareLabel() {
+  const canvas = document.getElementById('labelCanvas');
+  try {
+    const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+    const file = new File([blob], 'label.png', { type: 'image/png' });
+    if (navigator.canShare?.({ files: [file] })) {
+      await navigator.share({ files: [file], title: 'ParkingPro Label' });
+    } else {
+      downloadLabel();
+    }
+  } catch (e) {
+    downloadLabel();
+  }
+}
+
+// ─── Toast ────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+</script>
+
+</body>
+</html>

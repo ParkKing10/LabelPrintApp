@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: parkingpro-label
+    runtime: node
+    plan: free
+    buildCommand: npm install && npx puppeteer browsers install chrome
+    startCommand: node src/server.js
+    envVars:
+      - key: PARKINGPRO_URL
+        sync: false
+      - key: PARKINGPRO_EMAIL
+        sync: false
+      - key: PARKINGPRO_PASSWORD
+        sync: false
+      - key: APP_PASSWORD
+        sync: false
+      - key: PUPPETEER_SKIP_CHROMIUM_DOWNLOAD
+        value: "false"
+      - key: NODE_ENV
+        value: production
