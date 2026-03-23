@@ -138,10 +138,11 @@
 <div class="modal-overlay" id="editModal">
   <div class="modal-content">
     <div class="modal-header"><div class="modal-title">Bearbeiten & Label drucken</div><button class="modal-close" onclick="closeModal()">✕</button></div>
-    <div class="edit-field"><label>Kennzeichen</label><input type="text" id="editPlate" class="plate-input" autocapitalize="characters" autocomplete="off" spellcheck="false" oninput="this.value=this.value.toUpperCase();renderLabel()"></div>
     <div class="edit-field"><label>Kundenname</label><input type="text" id="editName" oninput="renderLabel()"></div>
-    <div class="edit-field"><label>Rückgabe (Check-out)</label><div class="static" id="editReturn">—</div></div>
-    <div class="edit-field"><label>Stellplatz (optional)</label><input type="text" id="editSpot" placeholder="z.B. A-12" autocomplete="off" oninput="renderLabel()"></div>
+    <div class="edit-field"><label>Rückgabe Datum</label><input type="text" id="editReturnDate" placeholder="02.04.2026" oninput="renderLabel()"></div>
+    <div class="edit-field"><label>Rückgabe Uhrzeit</label><input type="text" id="editReturnTime" placeholder="22:50" oninput="renderLabel()"></div>
+    <div class="edit-field"><label>Fahrzeug</label><input type="text" id="editCar" placeholder="z.B. Mazda" oninput="renderLabel()"></div>
+    <div class="edit-field"><label>Kennzeichen</label><input type="text" id="editPlate" class="plate-input" autocapitalize="characters" autocomplete="off" spellcheck="false" oninput="this.value=this.value.toUpperCase();renderLabel()"></div>
     <div class="label-wrap"><div class="label-frame"><canvas id="labelCanvas"></canvas></div></div>
     <div class="btn-group-stack">
       <button class="btn btn-white" onclick="downloadLabel()">📲 ALS BILD SPEICHERN</button>
@@ -220,64 +221,75 @@ function renderBookings(list) {
     <div class="booking-plate">${b.kennzeichen||'—'}</div>
     <div class="booking-name">${b.name||'—'}</div>
     <div class="booking-details">
-      ${b.rueckgabe?`<div class="booking-detail">↩ <strong>${b.rueckgabe}</strong></div>`:''}
-      ${b.zeit?`<div class="booking-detail">⏰ ${b.zeit}</div>`:''}
-      ${b.personen?`<div class="booking-detail">👤 ${b.personen}</div>`:''}
+      ${b.rueckgabeVoll?`<div class="booking-detail">↩ <strong>${b.rueckgabeVoll}</strong></div>`:(b.rueckgabe?`<div class="booking-detail">↩ <strong>${b.rueckgabe}</strong></div>`:'')}
       ${b.fahrzeug?`<div class="booking-detail">🚗 ${b.fahrzeug}</div>`:''}
+      ${b.zeit?`<div class="booking-detail">⏰ ${b.zeit}</div>`:''}
     </div></div>`).join('');
 }
 
 function openEdit(idx) {
   currentBooking={...allBookings[idx],_idx:idx};
-  document.getElementById('editPlate').value=currentBooking.kennzeichen||'';
   document.getElementById('editName').value=currentBooking.name||'';
-  document.getElementById('editReturn').textContent=currentBooking.rueckgabe||'—';
-  document.getElementById('editSpot').value='';
+  document.getElementById('editPlate').value=currentBooking.kennzeichen||'';
+  document.getElementById('editCar').value=currentBooking.fahrzeug||'';
+  // Use full departure datetime if available
+  document.getElementById('editReturnDate').value=currentBooking.rueckgabeDatum||currentBooking.rueckgabe||'';
+  document.getElementById('editReturnTime').value=currentBooking.rueckgabeZeit||'';
   document.getElementById('editModal').classList.add('active');
   renderLabel();
 }
 
 function closeModal() {
-  if(currentBooking){allBookings[currentBooking._idx].kennzeichen=document.getElementById('editPlate').value.trim().toUpperCase();allBookings[currentBooking._idx].name=document.getElementById('editName').value.trim();filterBookings();}
+  if(currentBooking){
+    const idx=currentBooking._idx;
+    allBookings[idx].kennzeichen=document.getElementById('editPlate').value.trim().toUpperCase();
+    allBookings[idx].name=document.getElementById('editName').value.trim();
+    allBookings[idx].fahrzeug=document.getElementById('editCar').value.trim();
+    allBookings[idx].rueckgabeDatum=document.getElementById('editReturnDate').value.trim();
+    allBookings[idx].rueckgabeZeit=document.getElementById('editReturnTime').value.trim();
+    allBookings[idx].rueckgabeVoll=(allBookings[idx].rueckgabeDatum+' '+allBookings[idx].rueckgabeZeit).trim();
+    filterBookings();
+  }
   document.getElementById('editModal').classList.remove('active');
 }
 
 function renderLabel() {
-  const plate=(document.getElementById('editPlate').value||'').trim().toUpperCase();
   const name=(document.getElementById('editName').value||'').trim();
-  const ret=document.getElementById('editReturn').textContent||'';
-  const spot=(document.getElementById('editSpot').value||'').trim();
+  const retDate=(document.getElementById('editReturnDate').value||'').trim();
+  const retTime=(document.getElementById('editReturnTime').value||'').trim();
+  const car=(document.getElementById('editCar').value||'').trim();
+  const plate=(document.getElementById('editPlate').value||'').trim().toUpperCase();
 
+  // 60x40mm at 300dpi = 709x472
   const W=709,H=472,canvas=document.getElementById('labelCanvas');
   canvas.width=W;canvas.height=H;canvas.style.width='100%';canvas.style.maxWidth='340px';canvas.style.height='auto';
   const ctx=canvas.getContext('2d');
   ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#000';ctx.textAlign='center';
 
-  // Top bar
-  ctx.fillStyle='#111';ctx.fillRect(0,0,W,52);
-  ctx.fillStyle='#4ade80';ctx.font='bold 22px "Helvetica Neue",Arial,sans-serif';ctx.textBaseline='middle';
-  ctx.fillText('▶ CHECK-IN',20,26);
-  if(ret&&ret!=='—'){ctx.fillStyle='#bbb';ctx.font='17px "Helvetica Neue",Arial,sans-serif';ctx.textAlign='right';ctx.fillText('Rückgabe: '+ret,W-20,26);ctx.textAlign='left';}
+  // Name (top)
+  ctx.font='500 42px "Helvetica Neue",Arial,sans-serif';ctx.textBaseline='top';
+  ctx.fillText(name||'—',W/2,20);
 
-  // PLATE
-  ctx.fillStyle='#000';let fs=82;
-  ctx.font=`bold ${fs}px "Helvetica Neue",Arial,sans-serif`;ctx.textBaseline='top';
-  while(ctx.measureText(plate||'—').width>W-40&&fs>40){fs-=4;ctx.font=`bold ${fs}px "Helvetica Neue",Arial,sans-serif`;}
-  ctx.fillText(plate||'—',20,72);
-  ctx.fillStyle='#e0e0e0';ctx.fillRect(20,72+fs+6,W-40,2);
+  // Rückgabe Datum (BIG)
+  let fs=100;
+  ctx.font=`900 ${fs}px "Helvetica Neue",Arial,sans-serif`;
+  while(ctx.measureText(retDate||'—').width>W-40&&fs>50){fs-=4;ctx.font=`900 ${fs}px "Helvetica Neue",Arial,sans-serif`;}
+  ctx.fillText(retDate||'—',W/2,85);
 
-  // Name
-  ctx.fillStyle='#333';ctx.font='500 30px "Helvetica Neue",Arial,sans-serif';
-  ctx.fillText(name,20,72+fs+22);
+  // Rückgabe Uhrzeit (BIG)
+  let fs2=90;
+  ctx.font=`900 ${fs2}px "Helvetica Neue",Arial,sans-serif`;
+  while(ctx.measureText(retTime||'—').width>W-40&&fs2>50){fs2-=4;ctx.font=`900 ${fs2}px "Helvetica Neue",Arial,sans-serif`;}
+  ctx.fillText(retTime||'—',W/2,85+fs+10);
 
-  // Spot
-  if(spot){ctx.fillStyle='#999';ctx.font='15px "Helvetica Neue",Arial,sans-serif';ctx.textAlign='right';ctx.fillText('STELLPLATZ',W-20,72+fs+20);ctx.fillStyle='#000';ctx.font='bold 32px "Helvetica Neue",Arial,sans-serif';ctx.fillText(spot,W-20,72+fs+40);ctx.textAlign='left';}
+  // Fahrzeug + Kennzeichen (bottom)
+  const bottomText = [car,plate].filter(Boolean).join('  ');
+  let fs3=40;
+  ctx.font=`600 ${fs3}px "Helvetica Neue",Arial,sans-serif`;
+  while(ctx.measureText(bottomText||'—').width>W-40&&fs3>24){fs3-=2;ctx.font=`600 ${fs3}px "Helvetica Neue",Arial,sans-serif`;}
+  ctx.fillText(bottomText||'—',W/2,H-fs3-20);
 
-  // Bottom
-  ctx.fillStyle='#f5f5f5';ctx.fillRect(0,H-42,W,42);
-  ctx.fillStyle='#bbb';ctx.font='14px "Helvetica Neue",Arial,sans-serif';ctx.fillText(companyName||'Label Print Tool',20,H-18);
-  ctx.textAlign='right';ctx.fillStyle='#ccc';ctx.font='12px "Helvetica Neue",Arial,sans-serif';
-  ctx.fillText(new Date().toLocaleString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}),W-20,H-18);
   ctx.textAlign='left';
 }
 
