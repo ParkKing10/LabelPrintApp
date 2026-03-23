@@ -10,6 +10,22 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 const PORT = process.env.PORT || 3000;
 const APP_PASSWORD = process.env.APP_PASSWORD || 'parkingpro2024';
 
+// ─── Company Configurations ──────────────────────────────────
+const COMPANIES = {
+  parkking: {
+    name: 'Park King',
+    baseUrl: process.env.PK_URL || 'https://parkdirect24.parkingpro.de',
+    email: process.env.PK_EMAIL || '',
+    password: process.env.PK_PASSWORD || ''
+  },
+  psfmsf: {
+    name: 'PSF/MSF',
+    baseUrl: process.env.PSF_URL || 'https://parkshuttlefly.parkingpro.de',
+    email: process.env.PSF_EMAIL || '',
+    password: process.env.PSF_PASSWORD || ''
+  }
+};
+
 // ─── Auth Middleware ───────────────────────────────────────────
 function requireAuth(req, res, next) {
   const token = req.headers['x-auth-token'];
@@ -77,7 +93,10 @@ async function getBrowser() {
   return browserInstance;
 }
 
-async function scrapeBookings(dateStr) {
+async function scrapeBookings(companyId) {
+  const company = COMPANIES[companyId];
+  if (!company) throw new Error('Unbekannte Firma: ' + companyId);
+
   const browser = await getBrowser();
   const page = await browser.newPage();
 
@@ -85,30 +104,24 @@ async function scrapeBookings(dateStr) {
     await page.setViewport({ width: 1400, height: 900 });
 
     // Step 1: Navigate to main URL
-    console.log('[Scraper] Step 1: Navigating to ParkingPro...');
-    await page.goto(process.env.PARKINGPRO_URL || 'https://parkdirect24.parkingpro.de/', {
+    console.log(`[Scraper][${company.name}] Step 1: Navigating...`);
+    await page.goto(company.baseUrl, {
       waitUntil: 'networkidle2',
       timeout: 45000
     });
     await new Promise(r => setTimeout(r, 2000));
 
     // Step 2: ALWAYS go to login page and login first
-    console.log('[Scraper] Step 2: Navigating to login page...');
-    await page.goto('https://parkdirect24.parkingpro.de/authentication/login', {
+    console.log(`[Scraper][${company.name}] Step 2: Login...`);
+    await page.goto(company.baseUrl + '/authentication/login', {
       waitUntil: 'networkidle2',
       timeout: 30000
     });
     await new Promise(r => setTimeout(r, 3000));
 
-    // Check if we actually need to login (might have a session cookie)
-    const currentUrl = page.url();
     const hasPasswordField = await page.evaluate(() => !!document.querySelector('input[type="password"]'));
-    console.log('[Scraper] On login page?', hasPasswordField, 'URL:', currentUrl);
 
     if (hasPasswordField) {
-      console.log('[Scraper] Logging in...');
-
-      // Find and fill email/username field (try all common selectors)
       const emailFilled = await page.evaluate((email) => {
         const selectors = ['input[type="email"]','input[name="email"]','input[name="username"]','#email','#username','input[type="text"]'];
         for (const sel of selectors) {
@@ -121,10 +134,8 @@ async function scrapeBookings(dateStr) {
           }
         }
         return false;
-      }, process.env.PARKINGPRO_EMAIL);
-      console.log('[Scraper] Email filled:', emailFilled);
+      }, company.email);
 
-      // Fill password
       const passFilled = await page.evaluate((pass) => {
         const el = document.querySelector('input[type="password"]');
         if (el) {
@@ -134,36 +145,24 @@ async function scrapeBookings(dateStr) {
           return true;
         }
         return false;
-      }, process.env.PARKINGPRO_PASSWORD);
-      console.log('[Scraper] Password filled:', passFilled);
+      }, company.password);
 
-      // Click submit button
       await new Promise(r => setTimeout(r, 500));
-      const submitClicked = await page.evaluate(() => {
+      await page.evaluate(() => {
         const btns = ['button[type="submit"]','input[type="submit"]','.btn-primary','button.login','.btn-login'];
-        for (const sel of btns) {
-          const el = document.querySelector(sel);
-          if (el) { el.click(); return sel; }
-        }
-        // Fallback: click any button in a form
+        for (const sel of btns) { const el = document.querySelector(sel); if (el) { el.click(); return; } }
         const form = document.querySelector('form');
-        if (form) {
-          const btn = form.querySelector('button, input[type="submit"]');
-          if (btn) { btn.click(); return 'form-button'; }
-        }
-        return false;
+        if (form) { const btn = form.querySelector('button, input[type="submit"]'); if (btn) btn.click(); }
       });
-      console.log('[Scraper] Submit clicked:', submitClicked);
 
-      // Wait for login to complete
       await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 20000 }).catch(() => {});
       await new Promise(r => setTimeout(r, 5000));
-      console.log('[Scraper] After login, URL:', page.url());
+      console.log(`[Scraper][${company.name}] Logged in, URL:`, page.url());
     }
 
     // Step 3: Navigate to day-all view
-    console.log('[Scraper] Step 3: Navigating to day-all view...');
-    await page.goto('https://parkdirect24.parkingpro.de/#view=day-all', {
+    console.log(`[Scraper][${company.name}] Step 3: Day view...`);
+    await page.goto(company.baseUrl + '/#view=day-all', {
       waitUntil: 'networkidle2',
       timeout: 30000
     });
@@ -278,10 +277,18 @@ app.post('/api/login', (req, res) => {
   }
 });
 
-// Get bookings
+// Get available companies
+app.get('/api/companies', requireAuth, (req, res) => {
+  const list = Object.entries(COMPANIES).map(([id, c]) => ({ id, name: c.name }));
+  res.json(list);
+});
+
+// Get bookings for a specific company
 app.get('/api/bookings', requireAuth, async (req, res) => {
   try {
-    const data = await scrapeBookings(req.query.date);
+    const companyId = req.query.company || 'parkking';
+    const data = await scrapeBookings(companyId);
+    data.company = COMPANIES[companyId]?.name || companyId;
     res.json(data);
   } catch (error) {
     console.error('Scrape error:', error);
