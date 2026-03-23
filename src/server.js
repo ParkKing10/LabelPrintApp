@@ -92,18 +92,50 @@ async function scrapeBookings(dateStr) {
     });
     await new Promise(r => setTimeout(r, 2000));
 
-    // Step 2: Check if we got redirected to login page
-    const currentUrl = page.url();
-    const needsLogin = currentUrl.includes('/authentication/login') ||
-                       await page.evaluate(() => !!document.querySelector('input[type="password"]'));
-    console.log('[Scraper] Step 2: Login needed?', needsLogin, 'URL:', currentUrl);
+    // Step 2: Wait for SPA to fully render and check login status
+    console.log('[Scraper] Step 2: Waiting for SPA to render...');
+    
+    // Wait longer for SPA JavaScript to load and render
+    await new Promise(r => setTimeout(r, 5000));
+    
+    // Check if login is needed - look for password field OR empty/minimal body OR login URL
+    let currentUrl = page.url();
+    let needsLogin = currentUrl.includes('/authentication/login');
+    
+    if (!needsLogin) {
+      // SPA might have redirected via JS - check again
+      needsLogin = await page.evaluate(() => {
+        // Check for password field
+        if (document.querySelector('input[type="password"]')) return true;
+        // Check for very short body (SPA not logged in often shows empty)
+        if (document.body.innerText.trim().length < 50) return true;
+        // Check for login-related text
+        const text = document.body.innerText.toLowerCase();
+        if (text.includes('anmelden') || text.includes('passwort vergessen') || text.includes('login')) return true;
+        return false;
+      });
+    }
+    
+    // Re-check URL after SPA JS ran
+    currentUrl = page.url();
+    console.log('[Scraper] Login needed?', needsLogin, 'URL:', currentUrl);
 
     if (needsLogin) {
+      // If redirected to login page, go there explicitly
+      if (!currentUrl.includes('/authentication/login')) {
+        console.log('[Scraper] Navigating to login page...');
+        await page.goto('https://parkdirect24.parkingpro.de/authentication/login', {
+          waitUntil: 'networkidle2',
+          timeout: 30000
+        });
+        await new Promise(r => setTimeout(r, 3000));
+      }
+      
       console.log('[Scraper] Logging in...');
 
       // Wait for the login form to fully render
-      await page.waitForSelector('input[type="password"]', { timeout: 10000 });
-      await new Promise(r => setTimeout(r, 1000));
+      await page.waitForSelector('input[type="password"]', { timeout: 15000 });
+      await new Promise(r => setTimeout(r, 2000));
 
       // Find and fill email/username field (try all common selectors)
       const emailFilled = await page.evaluate((email) => {
